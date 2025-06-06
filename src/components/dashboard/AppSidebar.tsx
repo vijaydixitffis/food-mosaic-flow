@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Sidebar,
@@ -16,7 +15,7 @@ import {
   Package, 
   ShoppingCart, 
   ChefHat, 
-  DollarSign, 
+  IndianRupee, 
   ClipboardList, 
   FileText, 
   BarChart3 
@@ -50,7 +49,7 @@ const adminMenuItems = [
   {
     title: "Pricing",
     url: "#",
-    icon: DollarSign,
+    icon: IndianRupee,
     view: "pricing",
   },
   {
