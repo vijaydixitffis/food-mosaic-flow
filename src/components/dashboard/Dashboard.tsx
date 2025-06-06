@@ -13,13 +13,29 @@ const Dashboard = () => {
   const { profile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('home');
 
+  console.log('Dashboard component rendered, currentView:', currentView);
+  console.log('Profile:', profile);
+
   const handleSignOut = async () => {
     await signOut();
   };
 
   const handleViewChange = (view: string) => {
+    console.log('Dashboard handleViewChange called with:', view);
     setCurrentView(view);
   };
+
+  if (!profile) {
+    console.log('No profile found, this should redirect to login');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
+          <p>Please wait while we load your profile.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>

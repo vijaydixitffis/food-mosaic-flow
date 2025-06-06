@@ -14,9 +14,14 @@ interface DashboardContentProps {
 export function DashboardContent({ currentView, onViewChange }: DashboardContentProps) {
   const { isAdmin } = useAuth();
 
+  console.log('DashboardContent rendered with currentView:', currentView);
+
   if (currentView === 'ingredients') {
+    console.log('Rendering IngredientsPage component');
     return <IngredientsPage />;
   }
+
+  console.log('Rendering default home view');
 
   // Default home view
   return (
@@ -25,6 +30,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Dashboard Overview</h2>
         <p className="text-gray-600">Welcome to your FoodMosaic control panel</p>
+        <p className="text-sm text-blue-600 mt-2">Current view: {currentView}</p>
       </div>
 
       {/* Stats Cards */}
@@ -83,7 +89,10 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
           <Button 
             variant="outline" 
             className="h-20 flex-col"
-            onClick={() => onViewChange('ingredients')}
+            onClick={() => {
+              console.log('Clicking Add Ingredient button, changing view to ingredients');
+              onViewChange('ingredients');
+            }}
           >
             <Package className="w-6 h-6 mb-2" />
             Add Ingredient

@@ -1,39 +1,34 @@
 
-import React, { useState } from 'react';
-import { AuthProvider, useAuth } from '@/hooks/useAuth';
-import LoginForm from '@/components/auth/LoginForm';
-import Dashboard from '@/components/dashboard/Dashboard';
+import { useAuth } from "@/hooks/useAuth";
+import { LoginForm } from "@/components/auth/LoginForm";
+import Dashboard from "@/components/dashboard/Dashboard";
 
-const AppContent = () => {
-  const { user, loading } = useAuth();
-  const [shouldShowDashboard, setShouldShowDashboard] = useState(false);
+const Index = () => {
+  const { user, isLoading } = useAuth();
 
-  if (loading) {
+  console.log('Index page rendered');
+  console.log('User:', user);
+  console.log('Is loading:', isLoading);
+
+  if (isLoading) {
+    console.log('Still loading auth state');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
+          <p>Please wait while we check your authentication status.</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !shouldShowDashboard) {
-    return (
-      <LoginForm onLoginSuccess={() => setShouldShowDashboard(true)} />
-    );
+  if (!user) {
+    console.log('No user found, showing login form');
+    return <LoginForm />;
   }
 
+  console.log('User found, showing dashboard');
   return <Dashboard />;
-};
-
-const Index = () => {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
 };
 
 export default Index;
