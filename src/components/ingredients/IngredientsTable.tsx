@@ -26,7 +26,14 @@ export function IngredientsTable({
   onEdit, 
   onDeactivate 
 }: IngredientsTableProps) {
+  console.log('IngredientsTable received props:', { 
+    ingredientsCount: ingredients.length, 
+    isLoading, 
+    ingredients 
+  });
+
   if (isLoading) {
+    console.log('Rendering loading state');
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-gray-500">Loading ingredients...</div>
@@ -35,12 +42,15 @@ export function IngredientsTable({
   }
 
   if (ingredients.length === 0) {
+    console.log('Rendering empty state - no ingredients found');
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-gray-500">No ingredients found. Add your first ingredient!</div>
       </div>
     );
   }
+
+  console.log('Rendering table with ingredients:', ingredients);
 
   return (
     <Table>
@@ -56,54 +66,57 @@ export function IngredientsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {ingredients.map((ingredient) => (
-          <TableRow key={ingredient.id}>
-            <TableCell className="font-medium">{ingredient.name}</TableCell>
-            <TableCell>{ingredient.short_description || '-'}</TableCell>
-            <TableCell>{ingredient.unit_of_measurement || '-'}</TableCell>
-            <TableCell>
-              {ingredient.rate ? `$${ingredient.rate.toFixed(2)}` : '-'}
-            </TableCell>
-            <TableCell>
-              <Badge variant={ingredient.active ? 'default' : 'secondary'}>
-                {ingredient.active ? 'Active' : 'Inactive'}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              {ingredient.tags && ingredient.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {ingredient.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                '-'
-              )}
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onEdit(ingredient)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                {ingredient.active && (
+        {ingredients.map((ingredient) => {
+          console.log('Rendering ingredient row:', ingredient);
+          return (
+            <TableRow key={ingredient.id}>
+              <TableCell className="font-medium">{ingredient.name}</TableCell>
+              <TableCell>{ingredient.short_description || '-'}</TableCell>
+              <TableCell>{ingredient.unit_of_measurement || '-'}</TableCell>
+              <TableCell>
+                {ingredient.rate ? `$${ingredient.rate.toFixed(2)}` : '-'}
+              </TableCell>
+              <TableCell>
+                <Badge variant={ingredient.active ? 'default' : 'secondary'}>
+                  {ingredient.active ? 'Active' : 'Inactive'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {ingredient.tags && ingredient.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {ingredient.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onDeactivate(ingredient.id)}
+                    onClick={() => onEdit(ingredient)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Edit className="w-4 h-4" />
                   </Button>
-                )}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+                  {ingredient.active && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDeactivate(ingredient.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

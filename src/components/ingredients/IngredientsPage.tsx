@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -31,15 +30,28 @@ export function IngredientsPage() {
   const { data: ingredients = [], isLoading, error } = useQuery({
     queryKey: ['ingredients'],
     queryFn: async () => {
+      console.log('Fetching ingredients from Supabase...');
+      
       const { data, error } = await supabase
         .from('ingredients')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      console.log('Supabase response:', { data, error });
+      
+      if (error) {
+        console.error('Error fetching ingredients:', error);
+        throw error;
+      }
+      
+      console.log('Successfully fetched ingredients:', data);
       return data as Ingredient[];
     },
   });
+
+  console.log('Current ingredients state:', ingredients);
+  console.log('Is loading:', isLoading);
+  console.log('Error:', error);
 
   // Deactivate ingredient mutation
   const deactivateMutation = useMutation({
@@ -90,6 +102,7 @@ export function IngredientsPage() {
   };
 
   if (error) {
+    console.error('Rendering error state:', error);
     return (
       <div className="p-6">
         <Card>
@@ -118,6 +131,11 @@ export function IngredientsPage() {
           <CardTitle>Ingredients List</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <p className="text-sm text-gray-600">
+              Total ingredients: {ingredients.length} | Loading: {isLoading ? 'Yes' : 'No'}
+            </p>
+          </div>
           <IngredientsTable
             ingredients={ingredients}
             isLoading={isLoading}
