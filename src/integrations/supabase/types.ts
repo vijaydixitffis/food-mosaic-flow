@@ -9,6 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      compound_ingredients: {
+        Row: {
+          compound_id: string
+          created_at: string
+          id: string
+          ingredient_id: string
+          quantity: number
+        }
+        Insert: {
+          compound_id: string
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          quantity?: number
+        }
+        Update: {
+          compound_id?: string
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compound_ingredients_compound_id_fkey"
+            columns: ["compound_id"]
+            isOneToOne: false
+            referencedRelation: "compounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compound_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compounds: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          tags: string[] | null
+          unit_of_measurement: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          tags?: string[] | null
+          unit_of_measurement?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          tags?: string[] | null
+          unit_of_measurement?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingredients: {
         Row: {
           active: boolean | null

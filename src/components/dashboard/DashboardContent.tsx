@@ -3,9 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, Users, BarChart3, ShoppingCart, ChefHat, DollarSign } from 'lucide-react';
+import { Package, Users, BarChart3, ShoppingCart, ChefHat, DollarSign, Layers } from 'lucide-react';
 import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
 import { ProductsPage } from '@/components/products/ProductsPage';
+import { CompoundsPage } from '@/components/compounds/CompoundsPage';
 
 interface DashboardContentProps {
   currentView: string;
@@ -20,6 +21,11 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
   if (currentView === 'ingredients') {
     console.log('Rendering IngredientsPage component');
     return <IngredientsPage />;
+  }
+
+  if (currentView === 'compounds') {
+    console.log('Rendering CompoundsPage component');
+    return <CompoundsPage />;
   }
 
   if (currentView === 'products') {
@@ -49,6 +55,17 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
           <CardContent>
             <div className="text-2xl font-bold">24</div>
             <CardDescription>Active ingredients</CardDescription>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compounds</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">6</div>
+            <CardDescription>Active compounds</CardDescription>
           </CardContent>
         </Card>
 
@@ -102,6 +119,18 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
           >
             <Package className="w-6 h-6 mb-2" />
             Add Ingredient
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col"
+            onClick={() => {
+              console.log('Clicking Create Compound button, changing view to compounds');
+              onViewChange('compounds');
+            }}
+          >
+            <Layers className="w-6 h-6 mb-2" />
+            Create Compound
           </Button>
           
           <Button 
