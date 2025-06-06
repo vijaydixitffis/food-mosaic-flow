@@ -43,10 +43,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Setting user from initial session');
           setUser(session.user);
           await fetchProfile(session.user.id);
+        } else {
+          console.log('No initial session found');
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -66,8 +68,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Clearing user from auth state change');
           setUser(null);
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -88,13 +90,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        return;
+        // Don't return early - we still want to set loading to false
+      } else {
+        console.log('Profile fetched:', data);
+        setProfile(data);
       }
-
-      console.log('Profile fetched:', data);
-      setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+    } finally {
+      // Always set loading to false, regardless of whether profile fetch succeeded
+      console.log('Setting loading to false after profile fetch attempt');
+      setLoading(false);
     }
   };
 
