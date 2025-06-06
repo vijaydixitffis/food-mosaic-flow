@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -136,19 +137,23 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
   }, [product, form]);
 
   const saveProductMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof productSchema>) => {
+    mutationFn: async (formData: z.infer<typeof productSchema>) => {
+      // Use the current tags state at the time of mutation
+      const currentTags = tags;
+      console.log('Current tags at mutation time:', currentTags);
+      
       const productData = {
-        name: data.name,
-        description: data.description || null,
-        pack_type: data.pack_type || null,
-        client_note: data.client_note || null,
-        remarks: data.remarks || null,
-        sale_price: data.sale_price ? parseFloat(data.sale_price) : null,
-        tags: tags.length > 0 ? tags : null,
+        name: formData.name,
+        description: formData.description || null,
+        pack_type: formData.pack_type || null,
+        client_note: formData.client_note || null,
+        remarks: formData.remarks || null,
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        tags: currentTags.length > 0 ? currentTags : null,
         active: true,
       };
 
-      console.log('Saving product with tags:', tags);
+      console.log('Saving product with tags:', currentTags);
       console.log('Product data being sent:', productData);
 
       let productId: string;
@@ -225,6 +230,9 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
   });
 
   const onSubmit = (data: z.infer<typeof productSchema>) => {
+    console.log('Form submitted with current tags state:', tags);
+    console.log('Product ingredients:', productIngredients);
+    
     if (productIngredients.length === 0) {
       toast({
         title: "Error",
@@ -233,7 +241,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
       });
       return;
     }
-    console.log('Form submitted with tags:', tags);
+    
     saveProductMutation.mutate(data);
   };
 
