@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 interface LoginFormProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess?: () => void;
 }
 
 const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
@@ -70,7 +69,8 @@ const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
           description: `Welcome back, ${profile.username}!`,
         });
 
-        onLoginSuccess();
+        // Call the optional callback if provided
+        onLoginSuccess?.();
       }
     } catch (error) {
       console.error('Login error:', error);
