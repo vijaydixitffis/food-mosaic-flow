@@ -4,10 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, Users, BarChart3, ShoppingCart, ChefHat, DollarSign } from 'lucide-react';
+import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
 
-export function DashboardContent() {
+interface DashboardContentProps {
+  currentView: string;
+  onViewChange: (view: string) => void;
+}
+
+export function DashboardContent({ currentView, onViewChange }: DashboardContentProps) {
   const { isAdmin } = useAuth();
 
+  if (currentView === 'ingredients') {
+    return <IngredientsPage />;
+  }
+
+  // Default home view
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -69,7 +80,11 @@ export function DashboardContent() {
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button variant="outline" className="h-20 flex-col">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col"
+            onClick={() => onViewChange('ingredients')}
+          >
             <Package className="w-6 h-6 mb-2" />
             Add Ingredient
           </Button>

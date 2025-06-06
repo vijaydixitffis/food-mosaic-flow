@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { LogOut } from 'lucide-react';
@@ -11,19 +11,24 @@ import { DashboardContent } from '@/components/dashboard/DashboardContent';
 
 const Dashboard = () => {
   const { profile, signOut } = useAuth();
+  const [currentView, setCurrentView] = useState('home');
 
   const handleSignOut = async () => {
     await signOut();
   };
 
+  const handleViewChange = (view: string) => {
+    setCurrentView(view);
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar />
+        <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
         <SidebarInset>
           <DashboardHeader profile={profile} onSignOut={handleSignOut} />
           <main className="flex-1 p-6">
-            <DashboardContent />
+            <DashboardContent currentView={currentView} onViewChange={handleViewChange} />
           </main>
           <DashboardFooter />
         </SidebarInset>
