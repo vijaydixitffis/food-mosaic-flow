@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { IngredientsTable } from './IngredientsTable';
 import { IngredientDialog } from './IngredientDialog';
 import { IngredientsSearch } from './IngredientsSearch';
+import { IngredientsPagination } from './IngredientsPagination';
 
 export interface Ingredient {
   id: string;
@@ -26,6 +27,8 @@ export function IngredientsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,9 +79,28 @@ export function IngredientsPage() {
     });
   }, [ingredients, searchTerm]);
 
+  // Paginate filtered ingredients
+  const paginatedIngredients = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredIngredients.slice(startIndex, endIndex);
+  }, [filteredIngredients, currentPage, pageSize]);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredIngredients.length / pageSize);
+
+  // Reset to first page when search term or page size changes
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
+
   console.log('Current ingredients state:', ingredients);
   console.log('Filtered ingredients:', filteredIngredients);
+  console.log('Paginated ingredients:', paginatedIngredients);
   console.log('Search term:', searchTerm);
+  console.log('Current page:', currentPage);
+  console.log('Page size:', pageSize);
+  console.log('Total pages:', totalPages);
   console.log('Is loading:', isLoading);
   console.log('Error:', error);
 
@@ -135,6 +157,14 @@ export function IngredientsPage() {
     setSearchTerm(value);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+  };
+
   if (error) {
     console.error('Rendering error state:', error);
     return (
@@ -175,6 +205,7 @@ export function IngredientsPage() {
             <p className="text-sm text-gray-600">
               Total ingredients: {ingredients.length} | 
               Filtered: {filteredIngredients.length} | 
+              Showing: {paginatedIngredients.length} |
               Loading: {isLoading ? 'Yes' : 'No'}
               {searchTerm && (
                 <span className="ml-2 text-blue-600">
@@ -184,10 +215,19 @@ export function IngredientsPage() {
             </p>
           </div>
           <IngredientsTable
-            ingredients={filteredIngredients}
+            ingredients={paginatedIngredients}
             isLoading={isLoading}
             onEdit={handleEditIngredient}
             onDeactivate={handleDeactivateIngredient}
+          />
+          
+          <IngredientsPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredIngredients.length}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         </CardContent>
       </Card>
