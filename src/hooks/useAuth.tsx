@@ -32,6 +32,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('AuthProvider useEffect triggered');
     
+    // Listen for auth changes first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        
+        if (session?.user) {
+          console.log('Setting user from auth state change');
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        } else {
+          console.log('Clearing user from auth state change');
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    );
+
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -54,24 +72,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (session?.user) {
-          console.log('Setting user from auth state change');
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          console.log('Clearing user from auth state change');
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    );
 
     return () => {
       console.log('Cleaning up auth subscription');
