@@ -9,6 +9,7 @@ import { CompoundsTable } from './CompoundsTable';
 import { CompoundDialog } from './CompoundDialog';
 import { CompoundsPagination } from './CompoundsPagination';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Compound = Database['public']['Tables']['compounds']['Row'];
@@ -35,6 +36,7 @@ export function CompoundsPage() {
   const [editingCompound, setEditingCompound] = useState<CompoundWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
 
   // Fetch compounds with their ingredients
   const { data: compoundsData, isLoading } = useQuery({
@@ -94,7 +96,7 @@ export function CompoundsPage() {
     },
   });
 
-  // Delete compound mutation
+  // Delete compound mutation - only for admins
   const deleteCompoundMutation = useMutation({
     mutationFn: async (compoundId: string) => {
       const { error } = await supabase
@@ -120,7 +122,7 @@ export function CompoundsPage() {
     },
   });
 
-  // Toggle active status mutation
+  // Toggle active status mutation - only for admins
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ compoundId, active }: { compoundId: string; active: boolean }) => {
       const { error } = await supabase
@@ -147,22 +149,54 @@ export function CompoundsPage() {
   });
 
   const handleAddCompound = () => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only admin users can add compounds",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingCompound(null);
     setIsDialogOpen(true);
   };
 
   const handleEditCompound = (compound: CompoundWithIngredients) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only admin users can edit compounds",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingCompound(compound);
     setIsDialogOpen(true);
   };
 
   const handleDeleteCompound = (compoundId: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only admin users can delete compounds",
+        variant: "destructive",
+      });
+      return;
+    }
     if (confirm('Are you sure you want to delete this compound?')) {
       deleteCompoundMutation.mutate(compoundId);
     }
   };
 
   const handleToggleActive = (compoundId: string, currentActive: boolean) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only admin users can change compound status",
+        variant: "destructive",
+      });
+      return;
+    }
     toggleActiveMutation.mutate({ compoundId, active: !currentActive });
   };
 
@@ -184,12 +218,16 @@ export function CompoundsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Compounds</h1>
-          <p className="text-gray-600 mt-2">Create and manage compound ingredients</p>
+          <p className="text-gray-600 mt-2">
+            {isAdmin ? 'Create and manage compound ingredients' : 'View compound ingredients'}
+          </p>
         </div>
-        <Button onClick={handleAddCompound} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Compound
-        </Button>
+        {isAdmin && (
+          <Button onClick={handleAddCompound} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Compound
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -210,6 +248,7 @@ export function CompoundsPage() {
         onEdit={handleEditCompound}
         onDelete={handleDeleteCompound}
         onToggleActive={handleToggleActive}
+        isAdmin={isAdmin}
       />
 
       {/* Pagination */}
@@ -222,16 +261,18 @@ export function CompoundsPage() {
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {/* Compound Dialog */}
-      <CompoundDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        compound={editingCompound}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['compounds'] });
-          setIsDialogOpen(false);
-        }}
-      />
+      {/* Compound Dialog - only show for admins */}
+      {isAdmin && (
+        <CompoundDialog
+          isOpen={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          compound={editingCompound}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['compounds'] });
+            setIsDialogOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -36,6 +36,7 @@ interface CompoundsTableProps {
   onEdit: (compound: Compound) => void;
   onDelete: (compoundId: string) => void;
   onToggleActive: (compoundId: string, currentActive: boolean) => void;
+  isAdmin: boolean;
 }
 
 export function CompoundsTable({
@@ -44,6 +45,7 @@ export function CompoundsTable({
   onEdit,
   onDelete,
   onToggleActive,
+  isAdmin,
 }: CompoundsTableProps) {
   if (isLoading) {
     return (
@@ -64,7 +66,7 @@ export function CompoundsTable({
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <p className="text-gray-500">No compounds found. Create your first compound to get started.</p>
+          <p className="text-gray-500">No compounds found. {isAdmin ? 'Create your first compound to get started.' : ''}</p>
         </CardContent>
       </Card>
     );
@@ -131,30 +133,32 @@ export function CompoundsTable({
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 ml-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onToggleActive(compound.id, compound.active)}
-                >
-                  {compound.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(compound)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDelete(compound.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onToggleActive(compound.id, compound.active)}
+                  >
+                    {compound.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(compound)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDelete(compound.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
