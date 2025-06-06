@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Edit, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -77,14 +77,6 @@ export function ProductsTable({
     ));
   };
 
-  const formatIngredients = (productIngredients: ProductWithIngredients['product_ingredients']) => {
-    if (!productIngredients || productIngredients.length === 0) return 'No ingredients';
-    
-    return productIngredients
-      .map(pi => `${pi.ingredients.name} (${pi.quantity}${pi.ingredients.unit_of_measurement || ''})`)
-      .join(', ');
-  };
-
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -92,9 +84,7 @@ export function ProductsTable({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Pack Type</TableHead>
             <TableHead>Sale Price</TableHead>
-            <TableHead>Ingredients</TableHead>
             <TableHead>Tags</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
@@ -109,14 +99,8 @@ export function ProductsTable({
                   {product.description || '-'}
                 </div>
               </TableCell>
-              <TableCell>{product.pack_type || '-'}</TableCell>
               <TableCell>
                 {product.sale_price ? `$${Number(product.sale_price).toFixed(2)}` : '-'}
-              </TableCell>
-              <TableCell className="max-w-xs">
-                <div className="truncate text-sm" title={formatIngredients(product.product_ingredients)}>
-                  {formatIngredients(product.product_ingredients)}
-                </div>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
@@ -151,15 +135,6 @@ export function ProductsTable({
                       <ToggleLeft className="w-3 h-3" />
                     )}
                     {product.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDelete(product.id)}
-                    className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Delete
                   </Button>
                 </div>
               </TableCell>
