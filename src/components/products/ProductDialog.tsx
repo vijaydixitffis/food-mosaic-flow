@@ -1,0 +1,507 @@
+
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { X, Plus } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type Product = Database['public']['Tables']['products']['Row'];
+type Ingredient = Database['public']['Tables']['ingredients']['Row'];
+type ProductWithIngredients = Product & {
+  product_ingredients: Array<{
+    id: string;
+    ingredient_id: string;
+    quantity: number;
+    ingredients: {
+      id: string;
+      name: string;
+      unit_of_measurement: string | null;
+    };
+  }>;
+};
+
+const productSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  pack_type: z.string().optional(),
+  client_note: z.string().optional(),
+  remarks: z.string().optional(),
+  sale_price: z.string().optional(),
+});
+
+interface ProductDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  product?: ProductWithIngredients | null;
+  onSuccess: () => void;
+}
+
+interface ProductIngredient {
+  ingredient_id: string;
+  quantity: number;
+  ingredient_name?: string;
+}
+
+export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDialogProps) {
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [productIngredients, setProductIngredients] = useState<ProductIngredient[]>([]);
+  const [selectedIngredient, setSelectedIngredient] = useState<string>('');
+  const [ingredientQuantity, setIngredientQuantity] = useState<string>('1');
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof productSchema>>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      pack_type: '',
+      client_note: '',
+      remarks: '',
+      sale_price: '',
+    },
+  });
+
+  // Fetch all active ingredients for the dropdown
+  const { data: ingredients = [] } = useQuery({
+    queryKey: ['ingredients-for-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ingredients')
+        .select('*')
+        .eq('active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data as Ingredient[];
+    },
+  });
+
+  // Initialize form when product changes
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        name: product.name,
+        description: product.description || '',
+        pack_type: product.pack_type || '',
+        client_note: product.client_note || '',
+        remarks: product.remarks || '',
+        sale_price: product.sale_price ? product.sale_price.toString() : '',
+      });
+      setTags(product.tags || []);
+      setProductIngredients(
+        product.product_ingredients.map(pi => ({
+          ingredient_id: pi.ingredient_id,
+          quantity: pi.quantity,
+          ingredient_name: pi.ingredients.name,
+        }))
+      );
+    } else {
+      form.reset({
+        name: '',
+        description: '',
+        pack_type: '',
+        client_note: '',
+        remarks: '',
+        sale_price: '',
+      });
+      setTags([]);
+      setProductIngredients([]);
+    }
+    setTagInput('');
+    setSelectedIngredient('');
+    setIngredientQuantity('1');
+  }, [product, form]);
+
+  const saveProductMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof productSchema>) => {
+      const productData = {
+        name: data.name,
+        description: data.description || null,
+        pack_type: data.pack_type || null,
+        client_note: data.client_note || null,
+        remarks: data.remarks || null,
+        sale_price: data.sale_price ? parseFloat(data.sale_price) : null,
+        tags: tags.length > 0 ? tags : [],
+        active: true,
+      };
+
+      let productId: string;
+
+      if (product) {
+        // Update existing product
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', product.id);
+
+        if (error) throw error;
+        productId = product.id;
+      } else {
+        // Create new product
+        const { data: newProduct, error } = await supabase
+          .from('products')
+          .insert(productData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        productId = newProduct.id;
+      }
+
+      // Handle product ingredients
+      if (product) {
+        // Delete existing ingredients
+        await supabase
+          .from('product_ingredients')
+          .delete()
+          .eq('product_id', productId);
+      }
+
+      // Insert new ingredients
+      if (productIngredients.length > 0) {
+        const ingredientsToInsert = productIngredients.map(pi => ({
+          product_id: productId,
+          ingredient_id: pi.ingredient_id,
+          quantity: pi.quantity,
+        }));
+
+        const { error: ingredientsError } = await supabase
+          .from('product_ingredients')
+          .insert(ingredientsToInsert);
+
+        if (ingredientsError) throw ingredientsError;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Product ${product ? 'updated' : 'created'} successfully`,
+      });
+      onSuccess();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to ${product ? 'update' : 'create'} product: ` + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: z.infer<typeof productSchema>) => {
+    if (productIngredients.length === 0) {
+      toast({
+        title: "Error",
+        description: "Product must have at least one ingredient",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveProductMutation.mutate(data);
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const addIngredient = () => {
+    if (selectedIngredient && ingredientQuantity) {
+      const quantity = parseFloat(ingredientQuantity);
+      if (quantity <= 0) {
+        toast({
+          title: "Error",
+          description: "Quantity must be greater than 0",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if ingredient already added
+      if (productIngredients.some(pi => pi.ingredient_id === selectedIngredient)) {
+        toast({
+          title: "Error",
+          description: "This ingredient is already added",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const ingredient = ingredients.find(i => i.id === selectedIngredient);
+      setProductIngredients([
+        ...productIngredients,
+        {
+          ingredient_id: selectedIngredient,
+          quantity,
+          ingredient_name: ingredient?.name,
+        },
+      ]);
+      setSelectedIngredient('');
+      setIngredientQuantity('1');
+    }
+  };
+
+  const removeIngredient = (ingredientId: string) => {
+    setProductIngredients(productIngredients.filter(pi => pi.ingredient_id !== ingredientId));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {product ? 'Edit Product' : 'Add New Product'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter product name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pack_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pack Type</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter product description"
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sale_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sale Price</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Ingredients Section */}
+            <div className="space-y-4">
+              <FormLabel>Ingredients *</FormLabel>
+              
+              {/* Add Ingredient */}
+              <div className="flex gap-2">
+                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select ingredient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredients.map((ingredient) => (
+                      <SelectItem key={ingredient.id} value={ingredient.id}>
+                        {ingredient.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.001"
+                  placeholder="Quantity"
+                  value={ingredientQuantity}
+                  onChange={(e) => setIngredientQuantity(e.target.value)}
+                  className="w-24"
+                />
+                <Button type="button" onClick={addIngredient} size="sm">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Selected Ingredients */}
+              {productIngredients.length > 0 && (
+                <div className="space-y-2">
+                  {productIngredients.map((pi) => (
+                    <div key={pi.ingredient_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm">
+                        {pi.ingredient_name} - Quantity: {pi.quantity}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeIngredient(pi.ingredient_id)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tags Section */}
+            <div className="space-y-4">
+              <FormLabel>Tags</FormLabel>
+              
+              {/* Add Tag */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter tag"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={addTag} size="sm">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Selected Tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 hover:bg-transparent"
+                        onClick={() => removeTag(tag)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="client_note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Note</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter client note"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="remarks"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Remarks</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter remarks"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saveProductMutation.isPending}>
+                {saveProductMutation.isPending
+                  ? 'Saving...'
+                  : product
+                  ? 'Update Product'
+                  : 'Add Product'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -45,6 +45,87 @@ export type Database = {
         }
         Relationships: []
       }
+      product_ingredients: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          client_note: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          pack_type: string | null
+          remarks: string | null
+          sale_price: number | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          pack_type?: string | null
+          remarks?: string | null
+          sale_price?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          pack_type?: string | null
+          remarks?: string | null
+          sale_price?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean

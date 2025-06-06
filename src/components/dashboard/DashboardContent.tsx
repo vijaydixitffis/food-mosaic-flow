@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, Users, BarChart3, ShoppingCart, ChefHat, DollarSign } from 'lucide-react';
 import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
+import { ProductsPage } from '@/components/products/ProductsPage';
 
 interface DashboardContentProps {
   currentView: string;
@@ -19,6 +20,11 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
   if (currentView === 'ingredients') {
     console.log('Rendering IngredientsPage component');
     return <IngredientsPage />;
+  }
+
+  if (currentView === 'products') {
+    console.log('Rendering ProductsPage component');
+    return <ProductsPage />;
   }
 
   console.log('Rendering default home view');
@@ -98,7 +104,14 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
             Add Ingredient
           </Button>
           
-          <Button variant="outline" className="h-20 flex-col">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col"
+            onClick={() => {
+              console.log('Clicking Create Product button, changing view to products');
+              onViewChange('products');
+            }}
+          >
             <ShoppingCart className="w-6 h-6 mb-2" />
             Create Product
           </Button>
