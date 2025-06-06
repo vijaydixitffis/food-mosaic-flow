@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,7 +110,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
         remarks: product.remarks || '',
         sale_price: product.sale_price ? product.sale_price.toString() : '',
       });
-      setTags(product.tags || []);
+      setTags(Array.isArray(product.tags) ? product.tags : []);
       setProductIngredients(
         product.product_ingredients.map(pi => ({
           ingredient_id: pi.ingredient_id,
@@ -145,9 +144,12 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
         client_note: data.client_note || null,
         remarks: data.remarks || null,
         sale_price: data.sale_price ? parseFloat(data.sale_price) : null,
-        tags: tags.length > 0 ? tags : [],
+        tags: tags.length > 0 ? tags : null,
         active: true,
       };
+
+      console.log('Saving product with tags:', tags);
+      console.log('Product data being sent:', productData);
 
       let productId: string;
 
@@ -158,7 +160,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
           .update(productData)
           .eq('id', product.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating product:', error);
+          throw error;
+        }
         productId = product.id;
       } else {
         // Create new product
@@ -168,7 +173,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating product:', error);
+          throw error;
+        }
         productId = newProduct.id;
       }
 
@@ -193,7 +201,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
           .from('product_ingredients')
           .insert(ingredientsToInsert);
 
-        if (ingredientsError) throw ingredientsError;
+        if (ingredientsError) {
+          console.error('Error inserting ingredients:', ingredientsError);
+          throw ingredientsError;
+        }
       }
     },
     onSuccess: () => {
@@ -204,6 +215,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
       onSuccess();
     },
     onError: (error) => {
+      console.error('Save product mutation error:', error);
       toast({
         title: "Error",
         description: `Failed to ${product ? 'update' : 'create'} product: ` + error.message,
@@ -221,18 +233,23 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
       });
       return;
     }
+    console.log('Form submitted with tags:', tags);
     saveProductMutation.mutate(data);
   };
 
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
+      const newTags = [...tags, tagInput.trim()];
+      setTags(newTags);
       setTagInput('');
+      console.log('Added tag, current tags:', newTags);
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    const newTags = tags.filter(tag => tag !== tagToRemove);
+    setTags(newTags);
+    console.log('Removed tag, current tags:', newTags);
   };
 
   const addIngredient = () => {
