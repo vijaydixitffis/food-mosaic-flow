@@ -59,7 +59,7 @@ export function IngredientsTable({
           <TableHead>Name</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Unit</TableHead>
-          <TableHead>Rate</TableHead>
+          <TableHead>Rate (INR)</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Tags</TableHead>
           <TableHead className="text-right">Actions</TableHead>
@@ -74,7 +74,7 @@ export function IngredientsTable({
               <TableCell>{ingredient.short_description || '-'}</TableCell>
               <TableCell>{ingredient.unit_of_measurement || '-'}</TableCell>
               <TableCell>
-                {ingredient.rate ? `$${ingredient.rate.toFixed(2)}` : '-'}
+                {ingredient.rate ? `₹${ingredient.rate.toFixed(2)}` : '-'}
               </TableCell>
               <TableCell>
                 <Badge variant={ingredient.active ? 'default' : 'secondary'}>
