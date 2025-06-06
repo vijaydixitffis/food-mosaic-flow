@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { IngredientsTable } from './IngredientsTable';
 import { IngredientDialog } from './IngredientDialog';
+import { IngredientsSearch } from './IngredientsSearch';
 
 export interface Ingredient {
   id: string;
@@ -23,6 +25,7 @@ export interface Ingredient {
 export function IngredientsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -49,7 +52,33 @@ export function IngredientsPage() {
     },
   });
 
+  // Filter ingredients based on search term
+  const filteredIngredients = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return ingredients;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    
+    return ingredients.filter((ingredient) => {
+      // Search in name
+      const nameMatch = ingredient.name?.toLowerCase().includes(searchLower);
+      
+      // Search in short_description
+      const descriptionMatch = ingredient.short_description?.toLowerCase().includes(searchLower);
+      
+      // Search in tags
+      const tagsMatch = ingredient.tags?.some(tag => 
+        tag.toLowerCase().includes(searchLower)
+      );
+
+      return nameMatch || descriptionMatch || tagsMatch;
+    });
+  }, [ingredients, searchTerm]);
+
   console.log('Current ingredients state:', ingredients);
+  console.log('Filtered ingredients:', filteredIngredients);
+  console.log('Search term:', searchTerm);
   console.log('Is loading:', isLoading);
   console.log('Error:', error);
 
@@ -101,6 +130,11 @@ export function IngredientsPage() {
     setEditingIngredient(null);
   };
 
+  const handleSearchChange = (value: string) => {
+    console.log('Search term changed to:', value);
+    setSearchTerm(value);
+  };
+
   if (error) {
     console.error('Rendering error state:', error);
     return (
@@ -128,16 +162,29 @@ export function IngredientsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ingredients List</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Ingredients List</CardTitle>
+            <IngredientsSearch 
+              searchTerm={searchTerm}
+              onSearchChange={handleSearchChange}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
             <p className="text-sm text-gray-600">
-              Total ingredients: {ingredients.length} | Loading: {isLoading ? 'Yes' : 'No'}
+              Total ingredients: {ingredients.length} | 
+              Filtered: {filteredIngredients.length} | 
+              Loading: {isLoading ? 'Yes' : 'No'}
+              {searchTerm && (
+                <span className="ml-2 text-blue-600">
+                  (Searching for: "{searchTerm}")
+                </span>
+              )}
             </p>
           </div>
           <IngredientsTable
-            ingredients={ingredients}
+            ingredients={filteredIngredients}
             isLoading={isLoading}
             onEdit={handleEditIngredient}
             onDeactivate={handleDeactivateIngredient}
