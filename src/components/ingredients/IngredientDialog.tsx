@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Ingredient } from './IngredientsPage';
@@ -28,6 +35,16 @@ interface IngredientFormData {
   rate: string;
   tags: string;
 }
+
+const UNIT_OPTIONS = [
+  { value: 'KG', label: 'Kilogram (KG)' },
+  { value: 'Gms', label: 'Grams (Gms)' },
+  { value: 'Lit', label: 'Liter (Lit)' },
+  { value: 'Mls', label: 'Milliliter (Mls)' },
+  { value: 'Pack', label: 'Pack' },
+  { value: 'Dozen', label: 'Dozen' },
+  { value: 'Units', label: 'Number of Units' },
+];
 
 export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDialogProps) {
   const [formData, setFormData] = useState<IngredientFormData>({
@@ -157,12 +174,21 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
 
           <div className="space-y-2">
             <Label htmlFor="unit">Unit of Measurement</Label>
-            <Input
-              id="unit"
+            <Select
               value={formData.unit_of_measurement}
-              onChange={(e) => handleInputChange('unit_of_measurement', e.target.value)}
-              placeholder="e.g., kg, lbs, pieces"
-            />
+              onValueChange={(value) => handleInputChange('unit_of_measurement', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit of measurement" />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIT_OPTIONS.map((unit) => (
+                  <SelectItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
