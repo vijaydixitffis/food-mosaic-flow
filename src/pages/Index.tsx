@@ -1,16 +1,16 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import { LoginForm } from "@/components/auth/LoginForm";
+import LoginForm from "@/components/auth/LoginForm";
 import Dashboard from "@/components/dashboard/Dashboard";
 
 const Index = () => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
 
   console.log('Index page rendered');
   console.log('User:', user);
-  console.log('Is loading:', isLoading);
+  console.log('Is loading:', loading);
 
-  if (isLoading) {
+  if (loading) {
     console.log('Still loading auth state');
     return (
       <div className="min-h-screen flex items-center justify-center">
