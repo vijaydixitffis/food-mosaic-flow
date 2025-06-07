@@ -64,7 +64,7 @@ export function WorkOrderInventoryTab({
         .from('product_compounds')
         .select(`
           compound_id,
-          quantity as compound_quantity,
+          quantity,
           product_id,
           compounds:compound_id (
             id,
@@ -109,29 +109,36 @@ export function WorkOrderInventoryTab({
       });
 
       // Process compound ingredients
-      productCompounds?.forEach(pc => {
-        const workOrderProduct = formData.products.find(p => p.product_id === pc.product_id);
-        if (!workOrderProduct || !pc.compounds) return;
-
-        pc.compounds.compound_ingredients?.forEach(ci => {
-          if (!ci.ingredients) return;
+      if (productCompounds) {
+        for (const pc of productCompounds) {
+          const workOrderProduct = formData.products.find(p => p.product_id === pc.product_id);
+          if (!workOrderProduct || !pc.compounds) continue;
           
-          const totalQuantity = ci.quantity * pc.compound_quantity * workOrderProduct.total_weight;
-          const ingredientId = ci.ingredient_id;
+          const compoundIngredients = pc.compounds.compound_ingredients;
+          if (!Array.isArray(compoundIngredients)) continue;
           
-          if (ingredientMap.has(ingredientId)) {
-            const existing = ingredientMap.get(ingredientId)!;
-            existing.total_quantity += totalQuantity;
-          } else {
-            ingredientMap.set(ingredientId, {
-              ingredient_id: ingredientId,
-              ingredient_name: ci.ingredients.name,
-              total_quantity: totalQuantity,
-              unit_of_measurement: ci.ingredients.unit_of_measurement || 'kg',
-            });
+          const compoundQuantity = pc.quantity || 0;
+          
+          for (const ci of compoundIngredients) {
+            if (!ci.ingredients) continue;
+            
+            const totalQuantity = (ci.quantity || 0) * compoundQuantity * (workOrderProduct.total_weight || 1);
+            const ingredientId = ci.ingredient_id;
+            
+            if (ingredientMap.has(ingredientId)) {
+              const existing = ingredientMap.get(ingredientId)!;
+              existing.total_quantity += totalQuantity;
+            } else {
+              ingredientMap.set(ingredientId, {
+                ingredient_id: ingredientId,
+                ingredient_name: ci.ingredients?.name || 'Unknown Ingredient',
+                total_quantity: totalQuantity,
+                unit_of_measurement: ci.ingredients?.unit_of_measurement || 'kg',
+              });
+            }
           }
-        });
-      });
+        }
+      }
 
       return Array.from(ingredientMap.values()).sort((a, b) => 
         a.ingredient_name.localeCompare(b.ingredient_name)
