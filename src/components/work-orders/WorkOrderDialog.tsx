@@ -9,7 +9,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkOrderBasicInfoTab } from './WorkOrderBasicInfoTab';
 import { WorkOrderProductsTab } from './WorkOrderProductsTab';
-import { WorkOrderReviewTab } from './WorkOrderReviewTab';
+import { WorkOrderInventoryTab } from './WorkOrderInventoryTab';
+import { WorkOrderRecipesTab } from './WorkOrderRecipesTab';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
@@ -95,11 +96,12 @@ export function WorkOrderDialog({
   };
 
   const canProceedToProducts = formData.name.trim() !== '';
-  const canProceedToReview = canProceedToProducts && formData.products.length > 0;
+  const canProceedToInventory = canProceedToProducts && formData.products.length > 0;
+  const canProceedToRecipes = canProceedToInventory;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isReadOnly 
@@ -112,7 +114,7 @@ export function WorkOrderDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger 
               value="products" 
@@ -122,11 +124,18 @@ export function WorkOrderDialog({
               Products
             </TabsTrigger>
             <TabsTrigger 
-              value="review" 
-              disabled={!canProceedToReview}
-              className={!canProceedToReview ? 'opacity-50' : ''}
+              value="inventory" 
+              disabled={!canProceedToInventory}
+              className={!canProceedToInventory ? 'opacity-50' : ''}
             >
-              Review
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger 
+              value="recipes" 
+              disabled={!canProceedToRecipes}
+              className={!canProceedToRecipes ? 'opacity-50' : ''}
+            >
+              Recipes
             </TabsTrigger>
           </TabsList>
 
@@ -143,17 +152,26 @@ export function WorkOrderDialog({
             <WorkOrderProductsTab
               formData={formData}
               setFormData={setFormData}
-              onNext={() => handleTabChange('review')}
+              onNext={() => handleTabChange('inventory')}
               onPrevious={() => handleTabChange('basic')}
               isReadOnly={isReadOnly}
             />
           </TabsContent>
 
-          <TabsContent value="review" className="space-y-4">
-            <WorkOrderReviewTab
+          <TabsContent value="inventory" className="space-y-4">
+            <WorkOrderInventoryTab
+              formData={formData}
+              onNext={() => handleTabChange('recipes')}
+              onPrevious={() => handleTabChange('products')}
+              isReadOnly={isReadOnly}
+            />
+          </TabsContent>
+
+          <TabsContent value="recipes" className="space-y-4">
+            <WorkOrderRecipesTab
               formData={formData}
               workOrder={workOrder}
-              onPrevious={() => handleTabChange('products')}
+              onPrevious={() => handleTabChange('inventory')}
               onSuccess={onSuccess}
               onClose={onClose}
               isReadOnly={isReadOnly}

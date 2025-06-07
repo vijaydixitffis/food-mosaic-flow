@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -268,7 +267,7 @@ export function WorkOrderProductsTab({
             disabled={!canProceed}
             className="flex items-center gap-2"
           >
-            Next: Review
+            Next: Inventory
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
