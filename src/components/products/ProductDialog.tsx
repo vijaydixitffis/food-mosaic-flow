@@ -9,23 +9,17 @@ import {
 } from '@/components/ui/dialog';
 import {
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { X, Plus } from 'lucide-react';
+import { ProductBasicInfoForm } from './ProductBasicInfoForm';
+import { ProductTagsSection } from './ProductTagsSection';
+import { ProductIngredientsTab } from './ProductIngredientsTab';
+import { ProductCompoundsTab } from './ProductCompoundsTab';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -182,6 +176,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     setCompoundQuantity('1');
   }, [product, form]);
 
+  // ... keep existing code (saveProductMutation)
   const saveProductMutation = useMutation({
     mutationFn: async (formData: z.infer<typeof productSchema>) => {
       const currentTags = tags;
@@ -318,6 +313,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     saveProductMutation.mutate(data);
   };
 
+  // Tag management functions
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       const newTags = [...tags, tagInput.trim()];
@@ -333,6 +329,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     console.log('Removed tag, current tags:', newTags);
   };
 
+  // Ingredient management functions
   const addIngredient = () => {
     if (selectedIngredient && ingredientQuantity) {
       const quantity = parseFloat(ingredientQuantity);
@@ -373,6 +370,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     setProductIngredients(productIngredients.filter(pi => pi.ingredient_id !== ingredientId));
   };
 
+  // Compound management functions
   const addCompound = () => {
     if (selectedCompound && compoundQuantity) {
       const quantity = parseFloat(compoundQuantity);
@@ -433,263 +431,43 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
               
               {/* Product Details Tab */}
               <TabsContent value="details" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter product name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="pack_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pack Type</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter product description"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <ProductBasicInfoForm form={form} />
+                
+                <ProductTagsSection
+                  tags={tags}
+                  tagInput={tagInput}
+                  onTagInputChange={setTagInput}
+                  onAddTag={addTag}
+                  onRemoveTag={removeTag}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="sale_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sale Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Tags Section */}
-                <div className="space-y-4">
-                  <FormLabel>Tags</FormLabel>
-                  
-                  {/* Add Tag */}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter tag"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addTag();
-                        }
-                      }}
-                    />
-                    <Button type="button" onClick={addTag} size="sm">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Selected Tags */}
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                          {tag}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto p-0 hover:bg-transparent"
-                            onClick={() => removeTag(tag)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="client_note"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Client Note</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter client note"
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="remarks"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Remarks</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter remarks"
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </TabsContent>
 
               {/* Ingredients Tab */}
               <TabsContent value="ingredients" className="space-y-4">
-                <div className="space-y-4">
-                  <FormLabel>Product Ingredients * (Add at least one ingredient or compound)</FormLabel>
-                  
-                  {/* Add Ingredient */}
-                  <div className="flex gap-2">
-                    <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select ingredient" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ingredients.map((ingredient) => (
-                          <SelectItem key={ingredient.id} value={ingredient.id}>
-                            {ingredient.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      placeholder="Quantity"
-                      value={ingredientQuantity}
-                      onChange={(e) => setIngredientQuantity(e.target.value)}
-                      className="w-24"
-                    />
-                    <Button type="button" onClick={addIngredient} size="sm">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Selected Ingredients */}
-                  {productIngredients.length > 0 && (
-                    <div className="space-y-2">
-                      {productIngredients.map((pi) => (
-                        <div key={pi.ingredient_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <span className="text-sm">
-                            {pi.ingredient_name} - Quantity: {pi.quantity}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeIngredient(pi.ingredient_id)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <ProductIngredientsTab
+                  ingredients={ingredients}
+                  productIngredients={productIngredients}
+                  selectedIngredient={selectedIngredient}
+                  ingredientQuantity={ingredientQuantity}
+                  onSelectedIngredientChange={setSelectedIngredient}
+                  onIngredientQuantityChange={setIngredientQuantity}
+                  onAddIngredient={addIngredient}
+                  onRemoveIngredient={removeIngredient}
+                />
               </TabsContent>
 
               {/* Compounds Tab */}
               <TabsContent value="compounds" className="space-y-4">
-                <div className="space-y-4">
-                  <FormLabel>Product Compounds * (Add at least one ingredient or compound)</FormLabel>
-                  
-                  {/* Add Compound */}
-                  <div className="flex gap-2">
-                    <Select value={selectedCompound} onValueChange={setSelectedCompound}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select compound" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {compounds.map((compound) => (
-                          <SelectItem key={compound.id} value={compound.id}>
-                            {compound.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      placeholder="Quantity"
-                      value={compoundQuantity}
-                      onChange={(e) => setCompoundQuantity(e.target.value)}
-                      className="w-24"
-                    />
-                    <Button type="button" onClick={addCompound} size="sm">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Selected Compounds */}
-                  {productCompounds.length > 0 && (
-                    <div className="space-y-2">
-                      {productCompounds.map((pc) => (
-                        <div key={pc.compound_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <span className="text-sm">
-                            {pc.compound_name} - Quantity: {pc.quantity}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeCompound(pc.compound_id)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <ProductCompoundsTab
+                  compounds={compounds}
+                  productCompounds={productCompounds}
+                  selectedCompound={selectedCompound}
+                  compoundQuantity={compoundQuantity}
+                  onSelectedCompoundChange={setSelectedCompound}
+                  onCompoundQuantityChange={setCompoundQuantity}
+                  onAddCompound={addCompound}
+                  onRemoveCompound={removeCompound}
+                />
               </TabsContent>
             </Tabs>
 
