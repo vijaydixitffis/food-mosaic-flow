@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,9 +38,10 @@ interface RecipeDialogProps {
   recipe: Recipe | null;
   isOpen: boolean;
   onClose: () => void;
+  isReadOnly?: boolean;
 }
 
-export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
+export function RecipeDialog({ recipe, isOpen, onClose, isReadOnly = false }: RecipeDialogProps) {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   
@@ -295,7 +295,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
     }
   };
 
-  const isReadOnly = !isAdmin;
+  const effectiveIsReadOnly = isReadOnly || !isAdmin;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -303,12 +303,12 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
         <DialogHeader>
           <DialogTitle>
             {recipe 
-              ? (isReadOnly ? 'View Recipe' : 'Edit Recipe')
+              ? (effectiveIsReadOnly ? 'View Recipe' : 'Edit Recipe')
               : 'Create New Recipe'
             }
           </DialogTitle>
           <DialogDescription>
-            {isReadOnly 
+            {effectiveIsReadOnly 
               ? 'View recipe details and instructions'
               : 'Manage recipe information, instructions, and associated products/compounds'
             }
@@ -324,7 +324,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter recipe name"
-                disabled={isReadOnly}
+                disabled={effectiveIsReadOnly}
               />
             </div>
             <div>
@@ -333,7 +333,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter recipe description"
-                disabled={isReadOnly}
+                disabled={effectiveIsReadOnly}
                 rows={3}
               />
             </div>
@@ -351,7 +351,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
               <RecipeInstructionsTab
                 instructions={instructions}
                 onInstructionsChange={setInstructions}
-                isReadOnly={isReadOnly}
+                isReadOnly={effectiveIsReadOnly}
               />
             </TabsContent>
 
@@ -360,7 +360,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
                 products={products || []}
                 recipeProducts={recipeProducts}
                 onRecipeProductsChange={setRecipeProducts}
-                isReadOnly={isReadOnly}
+                isReadOnly={effectiveIsReadOnly}
               />
             </TabsContent>
 
@@ -369,7 +369,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
                 compounds={compounds || []}
                 recipeCompounds={recipeCompounds}
                 onRecipeCompoundsChange={setRecipeCompounds}
-                isReadOnly={isReadOnly}
+                isReadOnly={effectiveIsReadOnly}
               />
             </TabsContent>
           </Tabs>
@@ -377,9 +377,9 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            {isReadOnly ? 'Close' : 'Cancel'}
+            {effectiveIsReadOnly ? 'Close' : 'Cancel'}
           </Button>
-          {!isReadOnly && (
+          {!effectiveIsReadOnly && (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : (recipe ? 'Update Recipe' : 'Create Recipe')}
             </Button>

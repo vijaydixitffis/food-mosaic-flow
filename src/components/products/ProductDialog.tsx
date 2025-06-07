@@ -63,6 +63,7 @@ interface ProductDialogProps {
   onClose: () => void;
   product?: ProductWithIngredients | null;
   onSuccess: () => void;
+  isReadOnly?: boolean;
 }
 
 interface ProductIngredient {
@@ -77,7 +78,7 @@ interface ProductCompound {
   compound_name?: string;
 }
 
-export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDialogProps) {
+export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly = false }: ProductDialogProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [productIngredients, setProductIngredients] = useState<ProductIngredient[]>([]);
@@ -416,7 +417,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {product ? 'Edit Product' : 'Add New Product'}
+            {product ? (isReadOnly ? 'View Product' : 'Edit Product') : 'Add New Product'}
           </DialogTitle>
         </DialogHeader>
 
@@ -475,13 +476,15 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saveProductMutation.isPending}>
-                {saveProductMutation.isPending
-                  ? 'Saving...'
-                  : product
-                  ? 'Update Product'
-                  : 'Add Product'}
-              </Button>
+              {!isReadOnly && (
+                <Button type="submit" disabled={saveProductMutation.isPending}>
+                  {saveProductMutation.isPending
+                    ? 'Saving...'
+                    : product
+                    ? 'Update Product'
+                    : 'Add Product'}
+                </Button>
+              )}
             </div>
           </form>
         </Form>
