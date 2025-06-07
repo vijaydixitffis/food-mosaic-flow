@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,17 +44,12 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin, profile, user } = useAuth();
-
-  // Add debugging logs
-  console.log('ProductsPage - Auth state:', { isStaff, isAdmin, profile, user });
+  const { isStaff, isAdmin } = useAuth();
 
   // Fetch products with their ingredients and compounds
   const { data: productsData, isLoading, error } = useQuery({
     queryKey: ['products', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      console.log('ProductsPage - Fetching products for user:', user?.id);
-      
       let query = supabase
         .from('products')
         .select(`
@@ -91,22 +87,13 @@ export function ProductsPage() {
         .select('*', { count: 'exact', head: true })
         .or(searchTerm ? `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%` : 'id.neq.0');
 
-      if (countError) {
-        console.error('ProductsPage - Count error:', countError);
-        throw countError;
-      }
+      if (countError) throw countError;
 
       // Get paginated results
       const { data, error } = await query
         .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
 
-      if (error) {
-        console.error('ProductsPage - Data fetch error:', error);
-        throw error;
-      }
-
-      console.log('ProductsPage - Fetched products:', data);
-      console.log('ProductsPage - Total count:', count);
+      if (error) throw error;
 
       return {
         products: data as ProductWithIngredients[],
@@ -114,11 +101,6 @@ export function ProductsPage() {
       };
     },
   });
-
-  // Log any query errors
-  if (error) {
-    console.error('ProductsPage - Query error:', error);
-  }
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -228,14 +210,6 @@ export function ProductsPage() {
   const products = productsData?.products || [];
   const totalItems = productsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
-
-  console.log('ProductsPage - Rendering with:', { 
-    products: products.length, 
-    totalItems, 
-    isLoading, 
-    error: error?.message,
-    isStaff 
-  });
 
   return (
     <div className="space-y-6">
