@@ -7,6 +7,7 @@ import { Package, Users, BarChart3, ShoppingCart, ChefHat, DollarSign, Layers } 
 import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
 import { ProductsPage } from '@/components/products/ProductsPage';
 import { CompoundsPage } from '@/components/compounds/CompoundsPage';
+import { RecipesPage } from '@/components/recipes/RecipesPage';
 
 interface DashboardContentProps {
   currentView: string;
@@ -31,6 +32,11 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
   if (currentView === 'products') {
     console.log('Rendering ProductsPage component');
     return <ProductsPage />;
+  }
+
+  if (currentView === 'recipes') {
+    console.log('Rendering RecipesPage component');
+    return <RecipesPage />;
   }
 
   console.log('Rendering default home view');
@@ -145,7 +151,14 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
             Create Product
           </Button>
           
-          <Button variant="outline" className="h-20 flex-col">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col"
+            onClick={() => {
+              console.log('Clicking New Recipe button, changing view to recipes');
+              onViewChange('recipes');
+            }}
+          >
             <ChefHat className="w-6 h-6 mb-2" />
             New Recipe
           </Button>

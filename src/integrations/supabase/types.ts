@@ -267,6 +267,137 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_compounds: {
+        Row: {
+          compound_id: string
+          created_at: string
+          id: string
+          recipe_id: string
+        }
+        Insert: {
+          compound_id: string
+          created_at?: string
+          id?: string
+          recipe_id: string
+        }
+        Update: {
+          compound_id?: string
+          created_at?: string
+          id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_compounds_compound_id_fkey"
+            columns: ["compound_id"]
+            isOneToOne: false
+            referencedRelation: "compounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_compounds_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_instructions: {
+        Row: {
+          created_at: string
+          id: string
+          instruction_text: string
+          recipe_id: string
+          sequence_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instruction_text: string
+          recipe_id: string
+          sequence_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instruction_text?: string
+          recipe_id?: string
+          sequence_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_instructions_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_products: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          recipe_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          recipe_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_products_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
