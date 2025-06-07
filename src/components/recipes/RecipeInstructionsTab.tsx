@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,7 +75,7 @@ export function RecipeInstructionsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <FormLabel>Recipe Instructions * (Sequential steps)</FormLabel>
+        <Label>Recipe Instructions * (Sequential steps)</Label>
         {!isReadOnly && (
           <Button type="button" onClick={addInstruction} size="sm">
             <Plus className="w-4 h-4 mr-2" />

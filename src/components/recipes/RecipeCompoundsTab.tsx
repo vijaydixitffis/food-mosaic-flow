@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +59,7 @@ export function RecipeCompoundsTab({
 
   return (
     <div className="space-y-4">
-      <FormLabel>Associated Compounds</FormLabel>
+      <Label>Associated Compounds</Label>
       
       {!isReadOnly && (
         <div className="flex gap-2">

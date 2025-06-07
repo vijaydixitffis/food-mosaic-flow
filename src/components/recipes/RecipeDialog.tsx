@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -319,7 +319,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
           {/* Basic Information */}
           <div className="space-y-4">
             <div>
-              <FormLabel>Recipe Name *</FormLabel>
+              <Label>Recipe Name *</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -328,7 +328,7 @@ export function RecipeDialog({ recipe, isOpen, onClose }: RecipeDialogProps) {
               />
             </div>
             <div>
-              <FormLabel>Description</FormLabel>
+              <Label>Description</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
