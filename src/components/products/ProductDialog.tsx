@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -425,84 +424,169 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter product name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="pack_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pack Type</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter product description"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="sale_price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sale Price</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Ingredients and Compounds Section */}
-            <div className="space-y-4">
-              <FormLabel>Composition * (Add at least one ingredient or compound)</FormLabel>
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Product Details</TabsTrigger>
+                <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+                <TabsTrigger value="compounds">Compounds</TabsTrigger>
+              </TabsList>
               
-              <Tabs defaultValue="ingredients" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-                  <TabsTrigger value="compounds">Compounds</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="ingredients" className="space-y-4">
+              {/* Product Details Tab */}
+              <TabsContent value="details" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter product name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="pack_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pack Type</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter product description"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sale_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sale Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Tags Section */}
+                <div className="space-y-4">
+                  <FormLabel>Tags</FormLabel>
+                  
+                  {/* Add Tag */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter tag"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={addTag} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Selected Tags */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                          {tag}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 hover:bg-transparent"
+                            onClick={() => removeTag(tag)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="client_note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Note</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter client note"
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="remarks"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Remarks</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter remarks"
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Ingredients Tab */}
+              <TabsContent value="ingredients" className="space-y-4">
+                <div className="space-y-4">
+                  <FormLabel>Product Ingredients * (Add at least one ingredient or compound)</FormLabel>
+                  
                   {/* Add Ingredient */}
                   <div className="flex gap-2">
                     <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
@@ -550,9 +634,14 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
                       ))}
                     </div>
                   )}
-                </TabsContent>
+                </div>
+              </TabsContent>
 
-                <TabsContent value="compounds" className="space-y-4">
+              {/* Compounds Tab */}
+              <TabsContent value="compounds" className="space-y-4">
+                <div className="space-y-4">
+                  <FormLabel>Product Compounds * (Add at least one ingredient or compound)</FormLabel>
+                  
                   {/* Add Compound */}
                   <div className="flex gap-2">
                     <Select value={selectedCompound} onValueChange={setSelectedCompound}>
@@ -600,90 +689,9 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
                       ))}
                     </div>
                   )}
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Tags Section */}
-            <div className="space-y-4">
-              <FormLabel>Tags</FormLabel>
-              
-              {/* Add Tag */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter tag"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTag();
-                    }
-                  }}
-                />
-                <Button type="button" onClick={addTag} size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Selected Tags */}
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 hover:bg-transparent"
-                        onClick={() => removeTag(tag)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </Badge>
-                  ))}
                 </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="client_note"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client Note</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter client note"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="remarks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Remarks</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter remarks"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              </TabsContent>
+            </Tabs>
 
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={onClose}>
