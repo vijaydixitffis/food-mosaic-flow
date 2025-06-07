@@ -43,12 +43,17 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff } = useAuth();
+  const { isStaff, isAdmin, profile, user } = useAuth();
+
+  // Add debugging logs
+  console.log('ProductsPage - Auth state:', { isStaff, isAdmin, profile, user });
 
   // Fetch products with their ingredients and compounds
-  const { data: productsData, isLoading } = useQuery({
+  const { data: productsData, isLoading, error } = useQuery({
     queryKey: ['products', searchTerm, currentPage, pageSize],
     queryFn: async () => {
+      console.log('ProductsPage - Fetching products for user:', user?.id);
+      
       let query = supabase
         .from('products')
         .select(`
@@ -81,16 +86,27 @@ export function ProductsPage() {
       }
 
       // Get total count for pagination
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
         .or(searchTerm ? `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%` : 'id.neq.0');
+
+      if (countError) {
+        console.error('ProductsPage - Count error:', countError);
+        throw countError;
+      }
 
       // Get paginated results
       const { data, error } = await query
         .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
 
-      if (error) throw error;
+      if (error) {
+        console.error('ProductsPage - Data fetch error:', error);
+        throw error;
+      }
+
+      console.log('ProductsPage - Fetched products:', data);
+      console.log('ProductsPage - Total count:', count);
 
       return {
         products: data as ProductWithIngredients[],
@@ -98,6 +114,11 @@ export function ProductsPage() {
       };
     },
   });
+
+  // Log any query errors
+  if (error) {
+    console.error('ProductsPage - Query error:', error);
+  }
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -208,6 +229,14 @@ export function ProductsPage() {
   const totalItems = productsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
 
+  console.log('ProductsPage - Rendering with:', { 
+    products: products.length, 
+    totalItems, 
+    isLoading, 
+    error: error?.message,
+    isStaff 
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -237,6 +266,14 @@ export function ProductsPage() {
           className="pl-10"
         />
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading products</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+        </div>
+      )}
 
       {/* Products Table */}
       <ProductsTable
