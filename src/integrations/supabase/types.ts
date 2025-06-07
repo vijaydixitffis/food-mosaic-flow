@@ -428,6 +428,81 @@ export type Database = {
         }
         Relationships: []
       }
+      work_order_products: {
+        Row: {
+          created_at: string
+          id: string
+          number_of_pouches: number
+          pouch_size: number
+          product_id: string
+          total_weight: number
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          number_of_pouches: number
+          pouch_size: number
+          product_id: string
+          total_weight: number
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          number_of_pouches?: number
+          pouch_size?: number
+          product_id?: string
+          total_weight?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_products_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          remarks: string | null
+          status: Database["public"]["Enums"]["work_order_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["work_order_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["work_order_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -444,6 +519,14 @@ export type Database = {
     }
     Enums: {
       user_role: "admin" | "staff"
+      work_order_status:
+        | "CREATED"
+        | "PROCURED"
+        | "IN-STOCK"
+        | "PROCESSED"
+        | "SHIPPED"
+        | "EXECUTED"
+        | "COMPLETE"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -560,6 +643,15 @@ export const Constants = {
   public: {
     Enums: {
       user_role: ["admin", "staff"],
+      work_order_status: [
+        "CREATED",
+        "PROCURED",
+        "IN-STOCK",
+        "PROCESSED",
+        "SHIPPED",
+        "EXECUTED",
+        "COMPLETE",
+      ],
     },
   },
 } as const
