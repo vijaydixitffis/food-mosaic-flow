@@ -97,11 +97,16 @@ export function ProductsPage() {
 
         console.log('ProductsPage - About to execute count query');
         
-        // Get total count for pagination
-        const { count, error: countError } = await supabase
+        // Get total count for pagination - Fixed the count query
+        let countQuery = supabase
           .from('products')
-          .select('*', { count: 'exact', head: true })
-          .or(searchTerm ? `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%` : 'id.neq.0');
+          .select('*', { count: 'exact', head: true });
+
+        if (searchTerm) {
+          countQuery = countQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        }
+
+        const { count, error: countError } = await countQuery;
 
         if (countError) {
           console.error('ProductsPage - Count query error:', {
