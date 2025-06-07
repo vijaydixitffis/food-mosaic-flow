@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,12 +31,24 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Ingredient = Database['public']['Tables']['ingredients']['Row'];
+type Compound = Database['public']['Tables']['compounds']['Row'];
+
 type ProductWithIngredients = Product & {
   product_ingredients: Array<{
     id: string;
     ingredient_id: string;
     quantity: number;
     ingredients: {
+      id: string;
+      name: string;
+      unit_of_measurement: string | null;
+    };
+  }>;
+  product_compounds: Array<{
+    id: string;
+    compound_id: string;
+    quantity: number;
+    compounds: {
       id: string;
       name: string;
       unit_of_measurement: string | null;
@@ -65,12 +78,21 @@ interface ProductIngredient {
   ingredient_name?: string;
 }
 
+interface ProductCompound {
+  compound_id: string;
+  quantity: number;
+  compound_name?: string;
+}
+
 export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDialogProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [productIngredients, setProductIngredients] = useState<ProductIngredient[]>([]);
+  const [productCompounds, setProductCompounds] = useState<ProductCompound[]>([]);
   const [selectedIngredient, setSelectedIngredient] = useState<string>('');
   const [ingredientQuantity, setIngredientQuantity] = useState<string>('1');
+  const [selectedCompound, setSelectedCompound] = useState<string>('');
+  const [compoundQuantity, setCompoundQuantity] = useState<string>('1');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof productSchema>>({
@@ -100,6 +122,21 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     },
   });
 
+  // Fetch all active compounds for the dropdown
+  const { data: compounds = [] } = useQuery({
+    queryKey: ['compounds-for-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('compounds')
+        .select('*')
+        .eq('active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data as Compound[];
+    },
+  });
+
   // Initialize form when product changes
   useEffect(() => {
     if (product) {
@@ -119,6 +156,13 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
           ingredient_name: pi.ingredients.name,
         }))
       );
+      setProductCompounds(
+        product.product_compounds?.map(pc => ({
+          compound_id: pc.compound_id,
+          quantity: pc.quantity,
+          compound_name: pc.compounds.name,
+        })) || []
+      );
     } else {
       form.reset({
         name: '',
@@ -130,15 +174,17 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
       });
       setTags([]);
       setProductIngredients([]);
+      setProductCompounds([]);
     }
     setTagInput('');
     setSelectedIngredient('');
     setIngredientQuantity('1');
+    setSelectedCompound('');
+    setCompoundQuantity('1');
   }, [product, form]);
 
   const saveProductMutation = useMutation({
     mutationFn: async (formData: z.infer<typeof productSchema>) => {
-      // Use the current tags state at the time of mutation
       const currentTags = tags;
       console.log('Current tags at mutation time:', currentTags);
       
@@ -211,6 +257,33 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
           throw ingredientsError;
         }
       }
+
+      // Handle product compounds
+      if (product) {
+        // Delete existing compounds
+        await supabase
+          .from('product_compounds')
+          .delete()
+          .eq('product_id', productId);
+      }
+
+      // Insert new compounds
+      if (productCompounds.length > 0) {
+        const compoundsToInsert = productCompounds.map(pc => ({
+          product_id: productId,
+          compound_id: pc.compound_id,
+          quantity: pc.quantity,
+        }));
+
+        const { error: compoundsError } = await supabase
+          .from('product_compounds')
+          .insert(compoundsToInsert);
+
+        if (compoundsError) {
+          console.error('Error inserting compounds:', compoundsError);
+          throw compoundsError;
+        }
+      }
     },
     onSuccess: () => {
       toast({
@@ -232,11 +305,12 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
   const onSubmit = (data: z.infer<typeof productSchema>) => {
     console.log('Form submitted with current tags state:', tags);
     console.log('Product ingredients:', productIngredients);
+    console.log('Product compounds:', productCompounds);
     
-    if (productIngredients.length === 0) {
+    if (productIngredients.length === 0 && productCompounds.length === 0) {
       toast({
         title: "Error",
-        description: "Product must have at least one ingredient",
+        description: "Product must have at least one ingredient or compound",
         variant: "destructive",
       });
       return;
@@ -300,9 +374,49 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
     setProductIngredients(productIngredients.filter(pi => pi.ingredient_id !== ingredientId));
   };
 
+  const addCompound = () => {
+    if (selectedCompound && compoundQuantity) {
+      const quantity = parseFloat(compoundQuantity);
+      if (quantity <= 0) {
+        toast({
+          title: "Error",
+          description: "Quantity must be greater than 0",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if compound already added
+      if (productCompounds.some(pc => pc.compound_id === selectedCompound)) {
+        toast({
+          title: "Error",
+          description: "This compound is already added",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const compound = compounds.find(c => c.id === selectedCompound);
+      setProductCompounds([
+        ...productCompounds,
+        {
+          compound_id: selectedCompound,
+          quantity,
+          compound_name: compound?.name,
+        },
+      ]);
+      setSelectedCompound('');
+      setCompoundQuantity('1');
+    }
+  };
+
+  const removeCompound = (compoundId: string) => {
+    setProductCompounds(productCompounds.filter(pc => pc.compound_id !== compoundId));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {product ? 'Edit Product' : 'Add New Product'}
@@ -378,57 +492,116 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess }: ProductDi
               )}
             />
 
-            {/* Ingredients Section */}
+            {/* Ingredients and Compounds Section */}
             <div className="space-y-4">
-              <FormLabel>Ingredients *</FormLabel>
+              <FormLabel>Composition * (Add at least one ingredient or compound)</FormLabel>
               
-              {/* Add Ingredient */}
-              <div className="flex gap-2">
-                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select ingredient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ingredients.map((ingredient) => (
-                      <SelectItem key={ingredient.id} value={ingredient.id}>
-                        {ingredient.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  step="0.001"
-                  placeholder="Quantity"
-                  value={ingredientQuantity}
-                  onChange={(e) => setIngredientQuantity(e.target.value)}
-                  className="w-24"
-                />
-                <Button type="button" onClick={addIngredient} size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
+              <Tabs defaultValue="ingredients" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+                  <TabsTrigger value="compounds">Compounds</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="ingredients" className="space-y-4">
+                  {/* Add Ingredient */}
+                  <div className="flex gap-2">
+                    <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select ingredient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ingredients.map((ingredient) => (
+                          <SelectItem key={ingredient.id} value={ingredient.id}>
+                            {ingredient.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="Quantity"
+                      value={ingredientQuantity}
+                      onChange={(e) => setIngredientQuantity(e.target.value)}
+                      className="w-24"
+                    />
+                    <Button type="button" onClick={addIngredient} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-              {/* Selected Ingredients */}
-              {productIngredients.length > 0 && (
-                <div className="space-y-2">
-                  {productIngredients.map((pi) => (
-                    <div key={pi.ingredient_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <span className="text-sm">
-                        {pi.ingredient_name} - Quantity: {pi.quantity}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeIngredient(pi.ingredient_id)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                  {/* Selected Ingredients */}
+                  {productIngredients.length > 0 && (
+                    <div className="space-y-2">
+                      {productIngredients.map((pi) => (
+                        <div key={pi.ingredient_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <span className="text-sm">
+                            {pi.ingredient_name} - Quantity: {pi.quantity}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeIngredient(pi.ingredient_id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
+                </TabsContent>
+
+                <TabsContent value="compounds" className="space-y-4">
+                  {/* Add Compound */}
+                  <div className="flex gap-2">
+                    <Select value={selectedCompound} onValueChange={setSelectedCompound}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select compound" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {compounds.map((compound) => (
+                          <SelectItem key={compound.id} value={compound.id}>
+                            {compound.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="Quantity"
+                      value={compoundQuantity}
+                      onChange={(e) => setCompoundQuantity(e.target.value)}
+                      className="w-24"
+                    />
+                    <Button type="button" onClick={addCompound} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Selected Compounds */}
+                  {productCompounds.length > 0 && (
+                    <div className="space-y-2">
+                      {productCompounds.map((pc) => (
+                        <div key={pc.compound_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <span className="text-sm">
+                            {pc.compound_name} - Quantity: {pc.quantity}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCompound(pc.compound_id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* Tags Section */}

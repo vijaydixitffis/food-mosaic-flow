@@ -22,6 +22,16 @@ type ProductWithIngredients = Product & {
       unit_of_measurement: string | null;
     };
   }>;
+  product_compounds: Array<{
+    id: string;
+    compound_id: string;
+    quantity: number;
+    compounds: {
+      id: string;
+      name: string;
+      unit_of_measurement: string | null;
+    };
+  }>;
 };
 
 export function ProductsPage() {
@@ -33,7 +43,7 @@ export function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch products with their ingredients
+  // Fetch products with their ingredients and compounds
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', searchTerm, currentPage, pageSize],
     queryFn: async () => {
@@ -46,6 +56,16 @@ export function ProductsPage() {
             ingredient_id,
             quantity,
             ingredients (
+              id,
+              name,
+              unit_of_measurement
+            )
+          ),
+          product_compounds (
+            id,
+            compound_id,
+            quantity,
+            compounds (
               id,
               name,
               unit_of_measurement
@@ -155,7 +175,7 @@ export function ProductsPage() {
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
   };
 
   const products = productsData?.products || [];
