@@ -88,8 +88,15 @@ interface AppSidebarProps {
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
   return (
     <Sidebar>
-      <SidebarHeader className="border-b p-4">
-        <h2 className="text-lg font-semibold text-sidebar-foreground">FoodMosaic</h2>
+      <SidebarHeader className="p-4">
+        <div className="flex justify-center w-full">
+          <img 
+            src="/erp-icon.jpg" 
+            alt="ERP Logo" 
+            className="w-20 h-20 object-contain mx-auto"
+            style={{ minWidth: '80px', minHeight: '80px' }}
+          />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

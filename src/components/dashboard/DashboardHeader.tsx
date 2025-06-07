@@ -11,13 +11,21 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ profile, onSignOut }: DashboardHeaderProps) {
   return (
-    <header className="bg-white shadow-sm border-b">
-      <div className="flex items-center justify-between px-4 py-3">
+    <header className="bg-white shadow-sm">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">FoodMosaic</h1>
-            <p className="text-sm text-gray-600">Enterprise Resource Planning</p>
+          <div className="flex items-center gap-2">
+            <img 
+              src="/fnbicon.png" 
+              alt="FoodMosaic Logo" 
+              className="h-20 w-20 object-contain"
+              style={{ width: '80px', height: '80px' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">FoodMosaic</h1>
+              <p className="text-sm text-gray-600">Execute recipes and ship well</p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-4">
