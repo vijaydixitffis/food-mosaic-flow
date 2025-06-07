@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,62 +43,120 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
+
+  console.log('ProductsPage - Auth Debug:', {
+    user: user?.id,
+    profile: profile?.role,
+    isStaff,
+    isAdmin,
+    userEmail: user?.email
+  });
 
   // Fetch products with their ingredients and compounds
   const { data: productsData, isLoading, error } = useQuery({
     queryKey: ['products', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          product_ingredients (
-            id,
-            ingredient_id,
-            quantity,
-            ingredients (
-              id,
-              name,
-              unit_of_measurement
-            )
-          ),
-          product_compounds (
-            id,
-            compound_id,
-            quantity,
-            compounds (
-              id,
-              name,
-              unit_of_measurement
-            )
-          )
-        `)
-        .order('name', { ascending: true });
+      console.log('ProductsPage - Starting query with auth state:', {
+        userId: user?.id,
+        userRole: profile?.role,
+        isAuthenticated: !!user
+      });
 
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      try {
+        let query = supabase
+          .from('products')
+          .select(`
+            *,
+            product_ingredients (
+              id,
+              ingredient_id,
+              quantity,
+              ingredients (
+                id,
+                name,
+                unit_of_measurement
+              )
+            ),
+            product_compounds (
+              id,
+              compound_id,
+              quantity,
+              compounds (
+                id,
+                name,
+                unit_of_measurement
+              )
+            )
+          `)
+          .order('name', { ascending: true });
+
+        if (searchTerm) {
+          query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        }
+
+        console.log('ProductsPage - About to execute count query');
+        
+        // Get total count for pagination
+        const { count, error: countError } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .or(searchTerm ? `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%` : 'id.neq.0');
+
+        if (countError) {
+          console.error('ProductsPage - Count query error:', {
+            error: countError,
+            message: countError.message,
+            details: countError.details,
+            hint: countError.hint,
+            code: countError.code
+          });
+          throw countError;
+        }
+
+        console.log('ProductsPage - Count query successful, count:', count);
+        console.log('ProductsPage - About to execute data query with pagination');
+
+        // Get paginated results
+        const { data, error } = await query
+          .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+        if (error) {
+          console.error('ProductsPage - Data query error:', {
+            error: error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw error;
+        }
+
+        console.log('ProductsPage - Data query successful:', {
+          dataLength: data?.length,
+          totalCount: count,
+          sampleData: data?.[0]
+        });
+
+        return {
+          products: data as ProductWithIngredients[],
+          total: count || 0
+        };
+      } catch (err) {
+        console.error('ProductsPage - Query function error:', err);
+        throw err;
       }
-
-      // Get total count for pagination
-      const { count, error: countError } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .or(searchTerm ? `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%` : 'id.neq.0');
-
-      if (countError) throw countError;
-
-      // Get paginated results
-      const { data, error } = await query
-        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
-
-      if (error) throw error;
-
-      return {
-        products: data as ProductWithIngredients[],
-        total: count || 0
-      };
     },
+  });
+
+  console.log('ProductsPage - Query state:', {
+    isLoading,
+    error: error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    } : null,
+    hasData: !!productsData
   });
 
   // Delete product mutation
@@ -246,6 +303,12 @@ export function ProductsPage() {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <h3 className="text-red-800 font-medium">Error loading products</h3>
           <p className="text-red-600 text-sm mt-1">{error.message}</p>
+          <details className="mt-2">
+            <summary className="text-red-600 text-sm cursor-pointer">Debug Details</summary>
+            <pre className="text-xs text-red-500 mt-1 whitespace-pre-wrap">
+              {JSON.stringify(error, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
