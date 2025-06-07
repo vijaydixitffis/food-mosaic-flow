@@ -26,6 +26,7 @@ interface IngredientDialogProps {
   isOpen: boolean;
   onClose: () => void;
   ingredient?: Ingredient | null;
+  isReadOnly?: boolean;
 }
 
 interface IngredientFormData {
@@ -46,7 +47,7 @@ const UNIT_OPTIONS = [
   { value: 'Units', label: 'Number of Units' },
 ];
 
-export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDialogProps) {
+export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = false }: IngredientDialogProps) {
   const [formData, setFormData] = useState<IngredientFormData>({
     name: '',
     short_description: '',
@@ -124,6 +125,8 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
+    
     setIsSubmitting(true);
     
     try {
@@ -134,6 +137,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
   };
 
   const handleInputChange = (field: keyof IngredientFormData, value: string) => {
+    if (isReadOnly) return;
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -145,7 +149,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {ingredient ? 'Edit Ingredient' : 'Add New Ingredient'}
+            {isReadOnly ? 'View Ingredient' : (ingredient ? 'Edit Ingredient' : 'Add New Ingredient')}
           </DialogTitle>
         </DialogHeader>
         
@@ -156,8 +160,9 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
               id="name"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              required
+              required={!isReadOnly}
               placeholder="Enter ingredient name"
+              readOnly={isReadOnly}
             />
           </div>
 
@@ -169,26 +174,34 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
               onChange={(e) => handleInputChange('short_description', e.target.value)}
               placeholder="Enter ingredient description"
               rows={3}
+              readOnly={isReadOnly}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="unit">Unit of Measurement</Label>
-            <Select
-              value={formData.unit_of_measurement}
-              onValueChange={(value) => handleInputChange('unit_of_measurement', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select unit of measurement" />
-              </SelectTrigger>
-              <SelectContent>
-                {UNIT_OPTIONS.map((unit) => (
-                  <SelectItem key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isReadOnly ? (
+              <Input
+                value={formData.unit_of_measurement || 'Not specified'}
+                readOnly
+              />
+            ) : (
+              <Select
+                value={formData.unit_of_measurement}
+                onValueChange={(value) => handleInputChange('unit_of_measurement', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit of measurement" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((unit) => (
+                    <SelectItem key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -200,6 +213,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
               value={formData.rate}
               onChange={(e) => handleInputChange('rate', e.target.value)}
               placeholder="0.00"
+              readOnly={isReadOnly}
             />
           </div>
 
@@ -210,16 +224,19 @@ export function IngredientDialog({ isOpen, onClose, ingredient }: IngredientDial
               value={formData.tags}
               onChange={(e) => handleInputChange('tags', e.target.value)}
               placeholder="Enter tags separated by commas"
+              readOnly={isReadOnly}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {isReadOnly ? 'Close' : 'Cancel'}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (ingredient ? 'Update' : 'Create')}
-            </Button>
+            {!isReadOnly && (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : (ingredient ? 'Update' : 'Create')}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>

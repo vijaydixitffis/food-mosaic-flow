@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { IngredientsTable } from './IngredientsTable';
 import { IngredientDialog } from './IngredientDialog';
 import { IngredientsSearch } from './IngredientsSearch';
@@ -30,6 +31,7 @@ export function IngredientsPage() {
   const [pageSize, setPageSize] = useState(10);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, isStaff } = useAuth();
 
   // Fetch ingredients
   const { data: ingredients = [], isLoading, error } = useQuery({
@@ -131,6 +133,14 @@ export function IngredientsPage() {
   });
 
   const handleAddIngredient = () => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view ingredients",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingIngredient(null);
     setIsDialogOpen(true);
   };
@@ -141,6 +151,14 @@ export function IngredientsPage() {
   };
 
   const handleDeactivateIngredient = async (id: string) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view ingredients",
+        variant: "destructive",
+      });
+      return;
+    }
     if (window.confirm('Are you sure you want to deactivate this ingredient?')) {
       deactivateMutation.mutate(id);
     }
@@ -182,11 +200,15 @@ export function IngredientsPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Manage Ingredients</h1>
-        <Button onClick={handleAddIngredient} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Ingredient
-        </Button>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+        </h1>
+        {!isStaff && (
+          <Button onClick={handleAddIngredient} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Ingredient
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -218,6 +240,7 @@ export function IngredientsPage() {
             isLoading={isLoading}
             onEdit={handleEditIngredient}
             onDeactivate={handleDeactivateIngredient}
+            isReadOnly={isStaff}
           />
           
           <IngredientsPagination
@@ -235,6 +258,7 @@ export function IngredientsPage() {
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
         ingredient={editingIngredient}
+        isReadOnly={isStaff}
       />
     </div>
   );

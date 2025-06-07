@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Edit, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -33,6 +33,7 @@ interface ProductsTableProps {
   onEdit: (product: ProductWithIngredients) => void;
   onDelete: (productId: string) => void;
   onToggleActive: (productId: string, currentActive: boolean) => void;
+  isReadOnly?: boolean;
 }
 
 export function ProductsTable({
@@ -41,6 +42,7 @@ export function ProductsTable({
   onEdit,
   onDelete,
   onToggleActive,
+  isReadOnly = false,
 }: ProductsTableProps) {
   if (isLoading) {
     return (
@@ -120,22 +122,24 @@ export function ProductsTable({
                     onClick={() => onEdit(product)}
                     className="flex items-center gap-1"
                   >
-                    <Edit className="w-3 h-3" />
-                    Edit
+                    {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
+                    {isReadOnly ? 'View' : 'Edit'}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onToggleActive(product.id, product.active)}
-                    className="flex items-center gap-1"
-                  >
-                    {product.active ? (
-                      <ToggleRight className="w-3 h-3" />
-                    ) : (
-                      <ToggleLeft className="w-3 h-3" />
-                    )}
-                    {product.active ? 'Deactivate' : 'Activate'}
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onToggleActive(product.id, product.active)}
+                      className="flex items-center gap-1"
+                    >
+                      {product.active ? (
+                        <ToggleRight className="w-3 h-3" />
+                      ) : (
+                        <ToggleLeft className="w-3 h-3" />
+                      )}
+                      {product.active ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

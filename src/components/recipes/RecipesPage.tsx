@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { RecipesTable } from './RecipesTable';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipesPagination } from './RecipesPagination';
@@ -17,13 +18,14 @@ type Recipe = Database['public']['Tables']['recipes']['Row'];
 const RECIPES_PER_PAGE = 10;
 
 export function RecipesPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  console.log('RecipesPage rendered, isAdmin:', isAdmin);
+  console.log('RecipesPage rendered, isAdmin:', isAdmin, 'isStaff:', isStaff);
 
   const { data: recipesData, isLoading, refetch } = useQuery({
     queryKey: ['recipes', searchTerm, currentPage],
@@ -77,6 +79,14 @@ export function RecipesPage() {
   });
 
   const handleCreateRecipe = () => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view recipes",
+        variant: "destructive",
+      });
+      return;
+    }
     console.log('Creating new recipe');
     setSelectedRecipe(null);
     setIsDialogOpen(true);
@@ -104,12 +114,14 @@ export function RecipesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Recipes</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {isStaff ? 'View Recipes' : 'Recipes'}
+          </h2>
           <p className="text-muted-foreground">
-            Manage your recipes and manufacturing instructions
+            {isStaff ? 'View recipes and manufacturing instructions' : 'Manage your recipes and manufacturing instructions'}
           </p>
         </div>
-        {isAdmin && (
+        {!isStaff && (
           <Button onClick={handleCreateRecipe}>
             <Plus className="w-4 h-4 mr-2" />
             Add Recipe
@@ -121,7 +133,7 @@ export function RecipesPage() {
         <CardHeader>
           <CardTitle>Recipe Management</CardTitle>
           <CardDescription>
-            Search and manage all recipes in your system
+            {isStaff ? 'View all recipes in your system' : 'Search and manage all recipes in your system'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,6 +178,7 @@ export function RecipesPage() {
         recipe={selectedRecipe}
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
+        isReadOnly={isStaff}
       />
     </div>
   );

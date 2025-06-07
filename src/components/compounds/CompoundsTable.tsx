@@ -133,32 +133,34 @@ export function CompoundsTable({
                 </div>
               </div>
               
-              {isAdmin && (
-                <div className="flex items-center gap-2 ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onToggleActive(compound.id, compound.active)}
-                  >
-                    {compound.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(compound)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDelete(compound.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2 ml-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(compound)}
+                >
+                  {isAdmin ? <Edit className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onToggleActive(compound.id, compound.active)}
+                    >
+                      {compound.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDelete(compound.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 import { Ingredient } from './IngredientsPage';
 
 interface IngredientsTableProps {
@@ -18,18 +18,21 @@ interface IngredientsTableProps {
   isLoading: boolean;
   onEdit: (ingredient: Ingredient) => void;
   onDeactivate: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
 export function IngredientsTable({ 
   ingredients, 
   isLoading, 
   onEdit, 
-  onDeactivate 
+  onDeactivate,
+  isReadOnly = false 
 }: IngredientsTableProps) {
   console.log('IngredientsTable received props:', { 
     ingredientsCount: ingredients.length, 
     isLoading, 
-    ingredients 
+    ingredients,
+    isReadOnly 
   });
 
   if (isLoading) {
@@ -101,9 +104,9 @@ export function IngredientsTable({
                     variant="outline"
                     onClick={() => onEdit(ingredient)}
                   >
-                    <Edit className="w-4 h-4" />
+                    {isReadOnly ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
                   </Button>
-                  {ingredient.active && (
+                  {!isReadOnly && ingredient.active && (
                     <Button
                       size="sm"
                       variant="outline"

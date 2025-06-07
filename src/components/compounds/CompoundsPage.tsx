@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,7 @@ export function CompoundsPage() {
   const [editingCompound, setEditingCompound] = useState<CompoundWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
 
   // Fetch compounds with their ingredients
   const { data: compoundsData, isLoading } = useQuery({
@@ -152,7 +151,7 @@ export function CompoundsPage() {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
-        description: "Only admin users can add compounds",
+        description: isStaff ? "You can only view compounds" : "Only admin users can add compounds",
         variant: "destructive",
       });
       return;
@@ -165,7 +164,7 @@ export function CompoundsPage() {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
-        description: "Only admin users can edit compounds",
+        description: isStaff ? "You can only view compounds" : "Only admin users can edit compounds",
         variant: "destructive",
       });
       return;
@@ -178,7 +177,7 @@ export function CompoundsPage() {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
-        description: "Only admin users can delete compounds",
+        description: isStaff ? "You can only view compounds" : "Only admin users can delete compounds",
         variant: "destructive",
       });
       return;
@@ -192,7 +191,7 @@ export function CompoundsPage() {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
-        description: "Only admin users can change compound status",
+        description: isStaff ? "You can only view compounds" : "Only admin users can change compound status",
         variant: "destructive",
       });
       return;
@@ -217,7 +216,9 @@ export function CompoundsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Compounds</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isStaff ? 'View Compounds' : 'Manage Compounds'}
+          </h1>
           <p className="text-gray-600 mt-2">
             {isAdmin ? 'Create and manage compound ingredients' : 'View compound ingredients'}
           </p>

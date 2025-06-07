@@ -8,6 +8,7 @@ import { ProductsTable } from './ProductsTable';
 import { ProductDialog } from './ProductDialog';
 import { ProductsPagination } from './ProductsPagination';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -42,6 +43,7 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isStaff } = useAuth();
 
   // Fetch products with their ingredients and compounds
   const { data: productsData, isLoading } = useQuery({
@@ -150,6 +152,14 @@ export function ProductsPage() {
   });
 
   const handleAddProduct = () => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view products",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingProduct(null);
     setIsDialogOpen(true);
   };
@@ -160,12 +170,28 @@ export function ProductsPage() {
   };
 
   const handleDeleteProduct = (productId: string) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view products",
+        variant: "destructive",
+      });
+      return;
+    }
     if (confirm('Are you sure you want to delete this product?')) {
       deleteProductMutation.mutate(productId);
     }
   };
 
   const handleToggleActive = (productId: string, currentActive: boolean) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view products",
+        variant: "destructive",
+      });
+      return;
+    }
     toggleActiveMutation.mutate({ productId, active: !currentActive });
   };
 
@@ -186,13 +212,19 @@ export function ProductsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Products</h1>
-          <p className="text-gray-600 mt-2">Create and manage your products</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isStaff ? 'View Products' : 'Manage Products'}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {isStaff ? 'View product information' : 'Create and manage your products'}
+          </p>
         </div>
-        <Button onClick={handleAddProduct} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Product
-        </Button>
+        {!isStaff && (
+          <Button onClick={handleAddProduct} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Product
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -213,6 +245,7 @@ export function ProductsPage() {
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onToggleActive={handleToggleActive}
+        isReadOnly={isStaff}
       />
 
       {/* Pagination */}
@@ -234,6 +267,7 @@ export function ProductsPage() {
           queryClient.invalidateQueries({ queryKey: ['products'] });
           setIsDialogOpen(false);
         }}
+        isReadOnly={isStaff}
       />
     </div>
   );
