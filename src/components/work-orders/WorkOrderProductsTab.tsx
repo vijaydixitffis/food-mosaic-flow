@@ -151,13 +151,15 @@ export function WorkOrderProductsTab({
                 </SelectTrigger>
                 <SelectContent>
                   {isLoading ? (
-                    <SelectItem value="" disabled>Loading...</SelectItem>
-                  ) : (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : products.length > 0 ? (
                     products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
                       </SelectItem>
                     ))
+                  ) : (
+                    <SelectItem value="no-products" disabled>No products available</SelectItem>
                   )}
                 </SelectContent>
               </Select>
