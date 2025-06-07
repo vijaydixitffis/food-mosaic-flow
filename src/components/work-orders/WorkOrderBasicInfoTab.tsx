@@ -13,6 +13,9 @@ import {
 } from '@/components/ui/select';
 import { ArrowRight } from 'lucide-react';
 import type { WorkOrderFormData } from './WorkOrderDialog';
+import type { Database } from '@/integrations/supabase/types';
+
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 
 interface WorkOrderBasicInfoTabProps {
   formData: WorkOrderFormData;
@@ -21,7 +24,7 @@ interface WorkOrderBasicInfoTabProps {
   isReadOnly: boolean;
 }
 
-const statusOptions = [
+const statusOptions: WorkOrderStatus[] = [
   'CREATED',
   'PROCURED',
   'IN-STOCK',
@@ -37,7 +40,7 @@ export function WorkOrderBasicInfoTab({
   onNext,
   isReadOnly,
 }: WorkOrderBasicInfoTabProps) {
-  const handleInputChange = (field: keyof WorkOrderFormData, value: string) => {
+  const handleInputChange = (field: keyof WorkOrderFormData, value: string | WorkOrderStatus) => {
     setFormData({
       ...formData,
       [field]: value,
@@ -64,7 +67,7 @@ export function WorkOrderBasicInfoTab({
           <Label htmlFor="status">Status</Label>
           <Select
             value={formData.status}
-            onValueChange={(value) => handleInputChange('status', value)}
+            onValueChange={(value: WorkOrderStatus) => handleInputChange('status', value)}
             disabled={isReadOnly}
           >
             <SelectTrigger>

@@ -11,6 +11,7 @@ import type { WorkOrderFormData } from './WorkOrderDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type WorkOrderWithProducts = WorkOrder & {
   work_order_products: Array<{
     id: string;
@@ -34,7 +35,7 @@ interface WorkOrderReviewTabProps {
   isReadOnly: boolean;
 }
 
-const statusColors = {
+const statusColors: Record<WorkOrderStatus, string> = {
   CREATED: 'bg-gray-100 text-gray-800',
   PROCURED: 'bg-blue-100 text-blue-800',
   'IN-STOCK': 'bg-green-100 text-green-800',
@@ -158,7 +159,7 @@ export function WorkOrderReviewTab({
               <dd className="mt-1">
                 <Badge
                   variant="secondary"
-                  className={statusColors[formData.status as keyof typeof statusColors]}
+                  className={statusColors[formData.status]}
                 >
                   {formData.status}
                 </Badge>

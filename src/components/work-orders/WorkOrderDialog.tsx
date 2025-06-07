@@ -13,6 +13,7 @@ import { WorkOrderReviewTab } from './WorkOrderReviewTab';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type WorkOrderWithProducts = WorkOrder & {
   work_order_products: Array<{
     id: string;
@@ -39,7 +40,7 @@ export interface WorkOrderFormData {
   name: string;
   description: string;
   remarks: string;
-  status: string;
+  status: WorkOrderStatus;
   products: Array<{
     product_id: string;
     total_weight: number;

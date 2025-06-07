@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type WorkOrderWithProducts = WorkOrder & {
   work_order_products: Array<{
     id: string;
@@ -117,7 +118,7 @@ export function WorkOrdersPage() {
 
   // Update status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ workOrderId, status }: { workOrderId: string; status: string }) => {
+    mutationFn: async ({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) => {
       const { error } = await supabase
         .from('work_orders')
         .update({ status })
@@ -182,7 +183,7 @@ export function WorkOrdersPage() {
       });
       return;
     }
-    updateStatusMutation.mutate({ workOrderId, status });
+    updateStatusMutation.mutate({ workOrderId, status: status as WorkOrderStatus });
   };
 
   const handlePageChange = (page: number) => {
