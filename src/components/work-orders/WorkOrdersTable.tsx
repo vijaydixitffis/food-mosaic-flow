@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Truck } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
@@ -40,6 +40,7 @@ interface WorkOrdersTableProps {
   onEdit: (workOrder: WorkOrderWithProducts) => void;
   onDelete: (workOrderId: string) => void;
   onUpdateStatus: (workOrderId: string, status: string) => void;
+  onViewDelivery: (workOrder: WorkOrderWithProducts) => void;
   isReadOnly: boolean;
 }
 
@@ -69,6 +70,7 @@ export function WorkOrdersTable({
   onEdit,
   onDelete,
   onUpdateStatus,
+  onViewDelivery,
   isReadOnly,
 }: WorkOrdersTableProps) {
   if (isLoading) {
@@ -134,7 +136,11 @@ export function WorkOrdersTable({
                 )}
               </TableCell>
               <TableCell>
-                {new Date(workOrder.created_at).toLocaleDateString()}
+                {new Date(workOrder.created_at).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: '2-digit'
+                })}
               </TableCell>
               <TableCell>
                 <DropdownMenu>
@@ -144,6 +150,10 @@ export function WorkOrdersTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-white">
+                    <DropdownMenuItem onClick={() => onViewDelivery(workOrder)}>
+                      <Truck className="mr-2 h-4 w-4" />
+                      View Delivery
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(workOrder)}>
                       <Edit className="mr-2 h-4 w-4" />
                       {isReadOnly ? 'View' : 'Edit'}

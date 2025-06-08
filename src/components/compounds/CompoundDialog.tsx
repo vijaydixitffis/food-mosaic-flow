@@ -340,7 +340,11 @@ export function CompoundDialog({ isOpen, onClose, compound, onSuccess }: Compoun
 
   const calculateTotalRate = () => {
     return selectedIngredients.reduce((sum, si) => {
-      return sum + ((si.rate || 0) * si.quantity);
+      // Convert quantity to kg if it's in grams
+      const quantityInKg = si.unit_of_measurement?.toLowerCase() === 'gms' 
+        ? si.quantity / 1000 
+        : si.quantity;
+      return sum + ((si.rate || 0) * quantityInKg);
     }, 0);
   };
 
@@ -480,23 +484,20 @@ export function CompoundDialog({ isOpen, onClose, compound, onSuccess }: Compoun
                         type="number"
                         value={si.quantity}
                         onChange={(e) => updateIngredientQuantity(si.ingredient_id, Number(e.target.value))}
-                        className="w-20"
                         min="0.01"
                         step="0.01"
                       />
-                      <span className="text-sm text-gray-500 w-12">
-                        {si.unit_of_measurement || 'units'}
-                      </span>
                       <span className="font-medium w-20 text-right">
-                        ₹{((si.rate || 0) * si.quantity).toFixed(2)}
+                        {(() => {
+                          // Convert quantity to kg if it's in grams
+                          const quantityInKg = si.unit_of_measurement?.toLowerCase() === 'gms' 
+                            ? si.quantity / 1000 
+                            : si.quantity;
+                          const cost = (si.rate || 0) * quantityInKg;
+                          return `₹${cost.toFixed(2)}`;
+                        })()}
                       </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeIngredient(si.ingredient_id)}
-                        className="text-red-600"
-                      >
+                      <Button type="button" onClick={() => removeIngredient(si.ingredient_id)} variant="destructive">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -504,7 +505,6 @@ export function CompoundDialog({ isOpen, onClose, compound, onSuccess }: Compoun
                 ))}
               </div>
 
-              {/* Total rate */}
               {selectedIngredients.length > 0 && (
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex justify-between items-center">

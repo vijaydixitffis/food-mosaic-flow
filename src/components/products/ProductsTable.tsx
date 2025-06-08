@@ -102,7 +102,7 @@ export function ProductsTable({
                 </div>
               </TableCell>
               <TableCell>
-                {product.sale_price ? `$${Number(product.sale_price).toFixed(2)}` : '-'}
+                {product.sale_price ? `₹${Number(product.sale_price).toFixed(2)}` : '-'}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">

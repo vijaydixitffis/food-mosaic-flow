@@ -20,8 +20,8 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Welcome to FoodMosaic</h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              <h1 className="text-2xl font-bold text-foreground mb-4">Welcome to FoodMosaic</h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Your comprehensive food production management system. Manage ingredients, compounds, 
                 products, recipes, work orders, and more from this central dashboard.
               </p>
@@ -29,48 +29,48 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               <div 
-                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('ingredients')}
               >
-                <h3 className="text-xl font-semibold mb-2">Ingredients</h3>
-                <p className="text-gray-600">Manage your raw ingredients and their properties</p>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Ingredients</h3>
+                <p className="text-muted-foreground">Manage your raw ingredients and their properties</p>
               </div>
               
               <div 
-                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('compounds')}
               >
-                <h3 className="text-xl font-semibold mb-2">Compounds</h3>
-                <p className="text-gray-600">Create and manage ingredient compounds</p>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Compounds</h3>
+                <p className="text-muted-foreground">Create and manage ingredient compounds</p>
               </div>
               
               <div 
-                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('products')}
               >
-                <h3 className="text-xl font-semibold mb-2">Products</h3>
-                <p className="text-gray-600">Manage your final products and compositions</p>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Products</h3>
+                <p className="text-muted-foreground">Manage your final products and compositions</p>
               </div>
               
               <div 
-                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('recipes')}
               >
-                <h3 className="text-xl font-semibold mb-2">Recipes</h3>
-                <p className="text-gray-600">Create and manage production recipes</p>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Recipes</h3>
+                <p className="text-muted-foreground">Create and manage production recipes</p>
               </div>
               
               <div 
-                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('work-orders')}
               >
-                <h3 className="text-xl font-semibold mb-2">Work Orders</h3>
-                <p className="text-gray-600">Create and track production work orders</p>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Work Orders</h3>
+                <p className="text-muted-foreground">Create and track production work orders</p>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h3 className="text-xl font-semibold mb-2">Reports</h3>
-                <p className="text-gray-600">View analytics and generate reports</p>
+              <div className="bg-card p-6 rounded-lg shadow-sm border">
+                <h3 className="text-xl font-semibold text-foreground mb-2">Reports</h3>
+                <p className="text-muted-foreground">View analytics and generate reports</p>
               </div>
             </div>
           </div>
@@ -117,7 +117,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/20">
       {renderContent()}
     </div>
   );

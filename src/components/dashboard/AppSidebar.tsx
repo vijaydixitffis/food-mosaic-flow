@@ -87,7 +87,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
   return (
-    <Sidebar>
+    <Sidebar className="bg-muted/20">
       <SidebarHeader className="p-4">
         <div className="flex justify-center w-full">
           <img 
@@ -107,7 +107,7 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild
-                    className={currentView === item.view ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+                    className={currentView === item.view ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}
                   >
                     <button 
                       onClick={() => onViewChange(item.view)}

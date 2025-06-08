@@ -7,6 +7,7 @@ import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { WorkOrdersTable } from './WorkOrdersTable';
 import { WorkOrderDialog } from './WorkOrderDialog';
+import { DeliveryDialog } from './DeliveryDialog';
 import { WorkOrdersPagination } from './WorkOrdersPagination';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,7 +34,9 @@ export function WorkOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrderWithProducts | null>(null);
+  const [viewingDeliveryFor, setViewingDeliveryFor] = useState<WorkOrderWithProducts | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isStaff, isAdmin } = useAuth();
@@ -244,6 +247,10 @@ export function WorkOrdersPage() {
         onEdit={handleEditWorkOrder}
         onDelete={handleDeleteWorkOrder}
         onUpdateStatus={handleUpdateStatus}
+        onViewDelivery={(workOrder) => {
+          setViewingDeliveryFor(workOrder);
+          setIsDeliveryDialogOpen(true);
+        }}
         isReadOnly={isStaff}
       />
 
@@ -268,6 +275,32 @@ export function WorkOrdersPage() {
         }}
         isReadOnly={isStaff}
       />
+
+      {/* Delivery Dialog */}
+      {viewingDeliveryFor && (
+        <DeliveryDialog
+          isOpen={isDeliveryDialogOpen}
+          onClose={() => setIsDeliveryDialogOpen(false)}
+          workOrder={viewingDeliveryFor}
+          formData={{
+            name: viewingDeliveryFor.name,
+            description: viewingDeliveryFor.description || '',
+            remarks: viewingDeliveryFor.remarks || '',
+            status: viewingDeliveryFor.status,
+            products: viewingDeliveryFor.work_order_products.map(p => ({
+              product_id: p.product_id,
+              total_weight: p.total_weight,
+              number_of_pouches: p.number_of_pouches,
+              pouch_size: p.pouch_size
+            }))
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+            setIsDeliveryDialogOpen(false);
+          }}
+          isReadOnly={true}
+        />
+      )}
     </div>
   );
 }

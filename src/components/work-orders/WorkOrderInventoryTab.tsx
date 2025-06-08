@@ -26,6 +26,7 @@ interface IngredientRequirement {
   ingredient_name: string;
   total_quantity: number;
   unit_of_measurement: string;
+  rate_per_kg: number | null;
 }
 
 export function WorkOrderInventoryTab({
@@ -52,7 +53,8 @@ export function WorkOrderInventoryTab({
           ingredients:ingredient_id (
             id,
             name,
-            unit_of_measurement
+            unit_of_measurement,
+            rate
           )
         `)
         .in('product_id', productIds);
@@ -75,7 +77,8 @@ export function WorkOrderInventoryTab({
               ingredients:ingredient_id (
                 id,
                 name,
-                unit_of_measurement
+                unit_of_measurement,
+                rate
               )
             )
           )
@@ -104,6 +107,7 @@ export function WorkOrderInventoryTab({
             ingredient_name: pi.ingredients.name,
             total_quantity: totalQuantity,
             unit_of_measurement: pi.ingredients.unit_of_measurement || 'kg',
+            rate_per_kg: pi.ingredients.rate,
           });
         }
       });
@@ -134,6 +138,7 @@ export function WorkOrderInventoryTab({
                 ingredient_name: ci.ingredients?.name || 'Unknown Ingredient',
                 total_quantity: totalQuantity,
                 unit_of_measurement: ci.ingredients?.unit_of_measurement || 'kg',
+                rate_per_kg: ci.ingredients?.rate || 0,
               });
             }
           }
@@ -196,8 +201,9 @@ export function WorkOrderInventoryTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>Ingredient</TableHead>
-                  <TableHead>Total Quantity Required</TableHead>
-                  <TableHead>Unit</TableHead>
+                  <TableHead className="text-right">Quantity Required</TableHead>
+                  <TableHead className="text-right">Rate (₹/kg)</TableHead>
+                  <TableHead className="text-right">Cost (₹)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,8 +212,25 @@ export function WorkOrderInventoryTab({
                     <TableCell className="font-medium">
                       {ingredient.ingredient_name}
                     </TableCell>
-                    <TableCell>{ingredient.total_quantity.toFixed(2)}</TableCell>
-                    <TableCell>{ingredient.unit_of_measurement}</TableCell>
+                    <TableCell className="text-right">
+                      {ingredient.total_quantity.toFixed(2)} {ingredient.unit_of_measurement}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {ingredient.rate_per_kg ? `₹${ingredient.rate_per_kg.toFixed(2)}` : '-'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {ingredient.rate_per_kg 
+                        ? (() => {
+                            // Always convert to kg for consistent calculation
+                            const quantityInKg = ingredient.unit_of_measurement?.toLowerCase() === 'gms' 
+                              ? ingredient.total_quantity / 1000 
+                              : ingredient.total_quantity;
+                            // Calculate cost based on rate per kg
+                            const cost = quantityInKg * ingredient.rate_per_kg;
+                            return `₹${cost.toFixed(2)}`;
+                          })()
+                        : '-'}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

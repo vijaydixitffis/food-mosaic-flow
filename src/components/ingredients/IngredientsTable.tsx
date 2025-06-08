@@ -62,7 +62,7 @@ export function IngredientsTable({
           <TableHead>Name</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Unit</TableHead>
-          <TableHead>Rate (INR)</TableHead>
+          <TableHead>Rate per Kg (₹)</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Tags</TableHead>
           <TableHead className="text-right">Actions</TableHead>

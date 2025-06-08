@@ -12,7 +12,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ profile, onSignOut }: DashboardHeaderProps) {
   return (
     <header className="bg-white shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <div className="flex items-center gap-2">
@@ -23,15 +23,15 @@ export function DashboardHeader({ profile, onSignOut }: DashboardHeaderProps) {
               style={{ width: '80px', height: '80px' }}
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">FoodMosaic</h1>
-              <p className="text-sm text-gray-600">Execute recipes and ship well</p>
+              <h1 className="text-2xl font-bold text-foreground">FoodMosaic</h1>
+              <p className="text-sm text-muted-foreground">Execute recipes and ship well</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">{profile?.username}</p>
-            <p className="text-xs text-gray-600 capitalize">{profile?.role}</p>
+            <p className="text-sm font-medium text-foreground">{profile?.username}</p>
+            <p className="text-xs text-muted-foreground capitalize">{profile?.role}</p>
           </div>
           <Button onClick={onSignOut} variant="outline" size="sm">
             <LogOut className="w-4 h-4 mr-2" />

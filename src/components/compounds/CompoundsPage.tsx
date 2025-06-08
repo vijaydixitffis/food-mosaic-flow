@@ -79,7 +79,10 @@ export function CompoundsPage() {
       const compoundsWithRates = data?.map(compound => {
         const totalRate = compound.compound_ingredients?.reduce((sum, ci) => {
           const rate = ci.ingredients?.rate || 0;
-          return sum + (rate * ci.quantity);
+          const unit = ci.ingredients?.unit_of_measurement?.toLowerCase() || '';
+          // Convert quantity to kg if it's in grams
+          const quantityInKg = unit === 'gms' ? ci.quantity / 1000 : ci.quantity;
+          return sum + (rate * quantityInKg);
         }, 0) || 0;
 
         return {

@@ -264,11 +264,10 @@ export function WorkOrderProductsTab({
           </Button>
           <Button 
             onClick={onNext} 
-            disabled={!canProceed}
+            disabled={formData.products.length === 0}
             className="flex items-center gap-2"
           >
-            Next: Inventory
-            <ArrowRight className="w-4 h-4" />
+            Save Work Order
           </Button>
         </div>
       )}

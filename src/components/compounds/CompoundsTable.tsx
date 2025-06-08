@@ -105,7 +105,14 @@ export function CompoundsTable({
                           {ci.ingredients.name} ({ci.quantity} {ci.ingredients.unit_of_measurement || 'units'})
                         </span>
                         <span className="font-medium">
-                          ₹{((ci.ingredients.rate || 0) * ci.quantity).toFixed(2)}
+                          {(() => {
+                            // Convert quantity to kg if it's in grams
+                            const quantityInKg = ci.ingredients.unit_of_measurement?.toLowerCase() === 'gms' 
+                              ? ci.quantity / 1000 
+                              : ci.quantity;
+                            const cost = (ci.ingredients.rate || 0) * quantityInKg;
+                            return `₹${cost.toFixed(2)}`;
+                          })()}
                         </span>
                       </div>
                     ))}

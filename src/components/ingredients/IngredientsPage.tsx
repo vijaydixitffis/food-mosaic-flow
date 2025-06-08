@@ -28,7 +28,7 @@ export function IngredientsPage() {
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, isStaff } = useAuth();

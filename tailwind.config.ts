@@ -19,34 +19,34 @@ export default {
 		},
 		extend: {
 			colors: {
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
+				border: 'hsl(210, 40%, 90%)', // Light blue border
+				input: 'hsl(210, 40%, 98%)', // Very light blue input
+				ring: 'hsl(210, 80%, 60%)', // Brighter blue for focus rings
+				background: 'hsl(0, 0%, 100%)', // White background
+				foreground: 'hsl(210, 29%, 24%)', // Dark blue-gray for text
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: 'hsl(210, 80%, 50%)', // Vibrant blue
+					foreground: 'hsl(0, 0%, 100%)' // White text on primary
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+					DEFAULT: 'hsl(210, 40%, 96%)', // Very light blue
+					foreground: 'hsl(210, 29%, 24%)' // Dark blue-gray text
 				},
 				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					DEFAULT: 'hsl(0, 84%, 60%)', // Red for destructive actions
+					foreground: 'hsl(0, 0%, 100%)' // White text
 				},
 				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					DEFAULT: 'hsl(210, 20%, 98%)', // Off-white with blue tint
+					foreground: 'hsl(210, 10%, 46%)' // Muted blue-gray text
 				},
 				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					DEFAULT: 'hsl(210, 90%, 55%)', // Slightly brighter blue
+					foreground: 'hsl(0, 0%, 100%)' // White text
 				},
 				popover: {
-					DEFAULT: 'hsl(var(--popover))',
-					foreground: 'hsl(var(--popover-foreground))'
+					DEFAULT: 'hsl(0, 0%, 100%)', // White background
+					foreground: 'hsl(210, 29%, 24%)' // Dark blue-gray text
 				},
 				card: {
 					DEFAULT: 'hsl(var(--card))',
