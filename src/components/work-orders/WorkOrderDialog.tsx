@@ -1,5 +1,8 @@
 
 import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -36,17 +39,20 @@ interface WorkOrderDialogProps {
   isReadOnly: boolean;
 }
 
+export interface WorkOrderProductItem {
+  id: string;
+  product_id: string;
+  total_weight: number;
+  number_of_pouches: number;
+  pouch_size: number;
+}
+
 export interface WorkOrderFormData {
   name: string;
   description: string;
   remarks: string;
   status: WorkOrderStatus;
-  products: Array<{
-    product_id: string;
-    total_weight: number;
-    number_of_pouches: number;
-    pouch_size: number;
-  }>;
+  products: WorkOrderProductItem[];
 }
 
 export function WorkOrderDialog({
@@ -57,6 +63,7 @@ export function WorkOrderDialog({
   isReadOnly,
 }: WorkOrderDialogProps) {
   const [activeTab, setActiveTab] = useState('basic');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [formData, setFormData] = useState<WorkOrderFormData>({
     name: '',
@@ -65,6 +72,118 @@ export function WorkOrderDialog({
     status: 'CREATED',
     products: [],
   });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const saveWorkOrder = useMutation({
+    mutationFn: async (data: WorkOrderFormData) => {
+      setIsSubmitting(true);
+      try {
+        // Prepare work order data
+        const workOrderData = {
+          name: data.name,
+          description: data.description,
+          remarks: data.remarks,
+          status: data.status,
+        };
+
+        // Prepare work order products data
+        const workOrderProductsData = data.products.map(product => ({
+          product_id: product.product_id,
+          number_of_pouches: product.number_of_pouches,
+          pouch_size: product.pouch_size,
+          total_weight: product.total_weight,
+        }));
+
+        if (workOrder) {
+          // Update existing work order
+          const { data: updatedWorkOrder, error: updateError } = await supabase
+            .from('work_orders')
+            .update(workOrderData)
+            .eq('id', workOrder.id)
+            .select()
+            .single();
+
+          if (updateError) throw updateError;
+
+          // Delete existing work order products
+          const { error: deleteError } = await supabase
+            .from('work_order_products')
+            .delete()
+            .eq('work_order_id', workOrder.id);
+
+          if (deleteError) throw deleteError;
+
+          // Insert new work order products
+          const { error: insertError } = await supabase
+            .from('work_order_products')
+            .insert(
+              workOrderProductsData.map(product => ({
+                ...product,
+                work_order_id: workOrder.id,
+              }))
+            );
+
+          if (insertError) throw insertError;
+
+          return updatedWorkOrder;
+        } else {
+          // Create new work order
+          const { data: newWorkOrder, error: insertError } = await supabase
+            .from('work_orders')
+            .insert(workOrderData)
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          // Insert work order products
+          const { error: productsError } = await supabase
+            .from('work_order_products')
+            .insert(
+              workOrderProductsData.map(product => ({
+                ...product,
+                work_order_id: newWorkOrder.id,
+              }))
+            );
+
+          if (productsError) throw productsError;
+
+          return newWorkOrder;
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast({
+        title: 'Success',
+        description: workOrder ? 'Work order updated successfully' : 'Work order created successfully',
+      });
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      console.error('Error saving work order:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save work order: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = async () => {
+    if (formData.products.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please add at least one product to the work order',
+        variant: 'destructive',
+      });
+      return;
+    }
+    await saveWorkOrder.mutateAsync(formData);
+  };
 
   React.useEffect(() => {
     if (workOrder) {
@@ -74,6 +193,7 @@ export function WorkOrderDialog({
         remarks: workOrder.remarks || '',
         status: workOrder.status,
         products: workOrder.work_order_products.map(wop => ({
+          id: wop.id,
           product_id: wop.product_id,
           total_weight: wop.total_weight,
           number_of_pouches: wop.number_of_pouches,
@@ -103,27 +223,19 @@ export function WorkOrderDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isReadOnly 
-              ? 'View Work Order' 
-              : workOrder 
-                ? 'Edit Work Order' 
-                : 'Create New Work Order'
-            }
+            {workOrder ? `Edit Work Order - ${workOrder.name}` : 'Create New Work Order'}
           </DialogTitle>
         </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger 
-              value="products" 
-              disabled={!canProceedToProducts}
-              className={!canProceedToProducts ? 'opacity-50' : ''}
-            >
-              Products
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList>
+            <TabsTrigger value="basic">
+              {formData.name ? `WO Code: ${formData.name}` : 'Basic Info'}
+            </TabsTrigger>
+            <TabsTrigger value="products" disabled={!formData.name}>
+              {formData.name ? `Products (${formData.products.length})` : 'Products'}
             </TabsTrigger>
           </TabsList>
 
@@ -140,9 +252,10 @@ export function WorkOrderDialog({
             <WorkOrderProductsTab
               formData={formData}
               setFormData={setFormData}
-              onNext={onSuccess}
+              onNext={handleSubmit}
               onPrevious={() => handleTabChange('basic')}
               isReadOnly={isReadOnly}
+              isSubmitting={isSubmitting}
             />
           </TabsContent>
         </Tabs>

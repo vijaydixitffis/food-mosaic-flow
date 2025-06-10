@@ -131,7 +131,14 @@ export function RecipesTable({ recipes, onEdit, onRefresh, isAdmin }: RecipesTab
               </Badge>
             </TableCell>
             <TableCell>
-              {new Date(recipe.created_at).toLocaleDateString()}
+              {(() => {
+                const date = new Date(recipe.created_at);
+                const day = date.getDate().toString().padStart(2, '0');
+                const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                const month = monthNames[date.getMonth()];
+                const year = date.getFullYear().toString().slice(-2);
+                return `${day}-${month}-${year}`;
+              })()}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">

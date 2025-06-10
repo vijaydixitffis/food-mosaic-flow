@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -22,18 +21,31 @@ import {
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkOrderFormData } from './WorkOrderDialog';
+import { Input } from '@/components/ui/input';
 
 interface WorkOrderProductsTabProps {
   formData: WorkOrderFormData;
   setFormData: (data: WorkOrderFormData) => void;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
   onPrevious: () => void;
   isReadOnly: boolean;
+  isSubmitting?: boolean;
 }
 
 interface Product {
   id: string;
   name: string;
+}
+
+// Predefined pouch sizes in grams
+const POUCH_SIZES = [50, 100, 125, 150, 250, 500, 1000];
+
+interface WorkOrderProductItem {
+  id: string;
+  product_id: string;
+  total_weight: number;
+  number_of_pouches: number;
+  pouch_size: number;
 }
 
 export function WorkOrderProductsTab({
@@ -42,10 +54,12 @@ export function WorkOrderProductsTab({
   onNext,
   onPrevious,
   isReadOnly,
+  isSubmitting = false,
 }: WorkOrderProductsTabProps) {
   const [selectedProductId, setSelectedProductId] = useState('');
-  const [totalWeight, setTotalWeight] = useState('');
+  const [selectedPouchSize, setSelectedPouchSize] = useState<number | ''>('');
   const [numberOfPouches, setNumberOfPouches] = useState('');
+  const [nextItemId, setNextItemId] = useState(1);
   const { toast } = useToast();
 
   // Fetch active products
@@ -63,65 +77,52 @@ export function WorkOrderProductsTab({
     },
   });
 
-  const calculatePouchSize = (weight: number, pouches: number) => {
-    if (weight > 0 && pouches > 0) {
-      return weight / pouches;
-    }
-    return 0;
-  };
-
-  const addProduct = () => {
-    if (!selectedProductId || !totalWeight || !numberOfPouches) {
+  const addProductItem = () => {
+    if (!selectedProductId || !selectedPouchSize || !numberOfPouches) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all product fields",
+        description: "Please fill in all fields",
         variant: "destructive",
       });
       return;
     }
 
-    const weight = parseFloat(totalWeight);
     const pouches = parseInt(numberOfPouches);
 
-    if (weight <= 0 || pouches <= 0) {
+    if (pouches <= 0) {
       toast({
         title: "Validation Error",
-        description: "Weight and number of pouches must be greater than 0",
+        description: "Number of pouches must be greater than 0",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if product is already added
-    if (formData.products.some(p => p.product_id === selectedProductId)) {
-      toast({
-        title: "Validation Error",
-        description: "This product is already added to the work order",
-        variant: "destructive",
-      });
-      return;
-    }
+    const pouchSize = Number(selectedPouchSize);
+    const totalWeight = pouchSize * pouches;
 
-    const pouchSize = calculatePouchSize(weight, pouches);
+    // Create a new item with all the details
+    const newItem: WorkOrderProductItem = {
+      id: `item-${nextItemId}`,
+      product_id: selectedProductId,
+      pouch_size: pouchSize,
+      number_of_pouches: pouches,
+      total_weight: totalWeight,
+    };
 
     setFormData({
       ...formData,
-      products: [...formData.products, {
-        product_id: selectedProductId,
-        total_weight: weight,
-        number_of_pouches: pouches,
-        pouch_size: pouchSize,
-      }],
+      products: [...formData.products, newItem],
     });
 
-    // Reset form
-    setSelectedProductId('');
-    setTotalWeight('');
+    // Reset form for next item
+    setSelectedPouchSize('');
     setNumberOfPouches('');
+    setNextItemId(nextId => nextId + 1);
   };
 
-  const removeProduct = (index: number) => {
-    const updatedProducts = formData.products.filter((_, i) => i !== index);
+  const removeProductItem = (id: string) => {
+    const updatedProducts = formData.products.filter(item => item.id !== id);
     setFormData({
       ...formData,
       products: updatedProducts,
@@ -139,12 +140,15 @@ export function WorkOrderProductsTab({
     <div className="space-y-6">
       {!isReadOnly && (
         <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="text-lg font-medium">Add Product to Work Order</h3>
+          <h3 className="text-lg font-medium">Add Product Item to Work Order</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="product">Product *</Label>
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <Select 
+                value={selectedProductId} 
+                onValueChange={setSelectedProductId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
@@ -165,16 +169,22 @@ export function WorkOrderProductsTab({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="totalWeight">Total Weight (kg) *</Label>
-              <Input
-                id="totalWeight"
-                type="number"
-                step="0.01"
-                min="0"
-                value={totalWeight}
-                onChange={(e) => setTotalWeight(e.target.value)}
-                placeholder="0.00"
-              />
+              <Label htmlFor="pouchSize">Pouch Size (g) *</Label>
+              <Select 
+                value={selectedPouchSize ? selectedPouchSize.toString() : ''} 
+                onValueChange={(value) => setSelectedPouchSize(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POUCH_SIZES.map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}g
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -190,19 +200,23 @@ export function WorkOrderProductsTab({
             </div>
 
             <div className="space-y-2">
-              <Label>Pouch Size (kg)</Label>
+              <Label>Total Weight</Label>
               <div className="px-3 py-2 bg-gray-50 border rounded-md text-sm">
-                {totalWeight && numberOfPouches ? 
-                  calculatePouchSize(parseFloat(totalWeight), parseInt(numberOfPouches)).toFixed(2) : 
-                  '0.00'
+                {selectedPouchSize && numberOfPouches ? 
+                  `${(selectedPouchSize * parseInt(numberOfPouches)).toLocaleString()}g` : 
+                  '0g'
                 }
               </div>
             </div>
           </div>
 
-          <Button onClick={addProduct} className="flex items-center gap-2">
+          <Button 
+            onClick={addProductItem} 
+            className="flex items-center gap-2"
+            disabled={!selectedProductId || !selectedPouchSize || !numberOfPouches}
+          >
             <Plus className="w-4 h-4" />
-            Add Product
+            Add Item
           </Button>
         </div>
       )}
@@ -221,35 +235,49 @@ export function WorkOrderProductsTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead>Total Weight (kg)</TableHead>
-                  <TableHead>Number of Pouches</TableHead>
-                  <TableHead>Pouch Size (kg)</TableHead>
+                  <TableHead>Pouch Size</TableHead>
+                  <TableHead>Pouches</TableHead>
+                  <TableHead>Total Weight</TableHead>
                   {!isReadOnly && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {formData.products.map((product, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">
-                      {getProductName(product.product_id)}
+                {formData.products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={isReadOnly ? 4 : 5} className="text-center text-muted-foreground py-4">
+                      No items added yet
                     </TableCell>
-                    <TableCell>{product.total_weight}</TableCell>
-                    <TableCell>{product.number_of_pouches}</TableCell>
-                    <TableCell>{product.pouch_size.toFixed(2)}</TableCell>
-                    {!isReadOnly && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeProduct(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    )}
                   </TableRow>
-                ))}
+                ) : (
+                  formData.products.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">
+                        {getProductName(item.product_id)}
+                      </TableCell>
+                      <TableCell>{item.pouch_size}g</TableCell>
+                      <TableCell>{item.number_of_pouches}</TableCell>
+                      <TableCell>
+                        {item.total_weight.toLocaleString()}g 
+                        <span className="text-muted-foreground ml-1">
+                          ({(item.total_weight / 1000).toFixed(2)}kg)
+                        </span>
+                      </TableCell>
+                      {!isReadOnly && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeProductItem(item.id)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -264,10 +292,10 @@ export function WorkOrderProductsTab({
           </Button>
           <Button 
             onClick={onNext} 
-            disabled={formData.products.length === 0}
+            disabled={formData.products.length === 0 || isSubmitting}
             className="flex items-center gap-2"
           >
-            Save Work Order
+            {isSubmitting ? 'Saving...' : 'Save Work Order'}
           </Button>
         </div>
       )}

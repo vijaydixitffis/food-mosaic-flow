@@ -53,12 +53,12 @@ export function WorkOrderBasicInfoTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Work Order Name *</Label>
+          <Label htmlFor="name">WO Code *</Label>
           <Input
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Enter work order name"
+            placeholder="Enter WO Code"
             disabled={isReadOnly}
           />
         </div>
