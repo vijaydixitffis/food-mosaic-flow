@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,47 +43,40 @@ export function WorkOrderRecipesTab({
 
       const productIds = formData.products.map(p => p.product_id);
       
-      const { data, error } = await supabase
+      const { data: recipeProducts, error: recipeProductsError } = await supabase
         .from('recipe_products')
-        .select(`
-          recipes:recipe_id (
-            id,
-            name,
-            description,
-            recipe_instructions (
-              id,
-              instruction_text,
-              sequence_number
-            )
-          )
-        `)
+        .select('recipe_id')
         .in('product_id', productIds);
-
-      if (error) throw error;
-
-      // Extract unique recipes and sort instructions
-      const uniqueRecipes = new Map<string, Recipe>();
       
-      data?.forEach(rp => {
-        if (rp.recipes) {
-          const recipe = rp.recipes as Recipe;
-          if (!uniqueRecipes.has(recipe.id)) {
-            // Sort instructions by sequence number
-            const sortedInstructions = [...recipe.recipe_instructions].sort(
-              (a, b) => a.sequence_number - b.sequence_number
-            );
-            
-            uniqueRecipes.set(recipe.id, {
-              ...recipe,
-              recipe_instructions: sortedInstructions,
-            });
-          }
-        }
+      if (recipeProductsError) throw recipeProductsError;
+      if (!recipeProducts || recipeProducts.length === 0) return [];
+      
+      const recipeIds = [...new Set(recipeProducts.map(rp => rp.recipe_id))];
+
+      const [recipesResult, instructionsResult] = await Promise.all([
+        supabase.from('recipes').select('id, name, description').in('id', recipeIds),
+        supabase.from('recipe_instructions').select('id, instruction_text, sequence_number, recipe_id').in('recipe_id', recipeIds)
+      ]);
+
+      const { data: recipesData, error: recipesError } = recipesResult;
+      const { data: instructionsData, error: instructionsError } = instructionsResult;
+
+      if (recipesError) throw recipesError;
+      if (instructionsError) throw instructionsError;
+
+      // Combine them
+      const recipesWithInstructions: Recipe[] = (recipesData || []).map(recipe => {
+        const instructions = (instructionsData || [])
+          .filter(inst => inst.recipe_id === recipe.id)
+          .sort((a, b) => a.sequence_number - b.sequence_number);
+        return {
+          ...recipe,
+          description: recipe.description || null,
+          recipe_instructions: instructions,
+        };
       });
 
-      return Array.from(uniqueRecipes.values()).sort((a, b) => 
-        a.name.localeCompare(b.name)
-      );
+      return recipesWithInstructions.sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: formData.products.length > 0,
   });
