@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Sidebar,
@@ -20,7 +19,8 @@ import {
   ClipboardList, 
   FileText, 
   BarChart3,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -53,6 +53,12 @@ const adminMenuItems = [
     url: "#",
     icon: ChefHat,
     view: "recipes",
+  },
+  {
+    title: "Clients",
+    url: "#",
+    icon: Users,
+    view: "clients",
   },
   {
     title: "Pricing",
