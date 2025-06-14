@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +21,8 @@ import {
   ClipboardList, 
   FileText, 
   BarChart3,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -61,6 +63,12 @@ const adminMenuItems = [
     view: "pricing",
   },
   {
+    title: "Clients",
+    url: "/clients",
+    icon: Users,
+    view: "clients",
+  },
+  {
     title: "Work Orders",
     url: "#",
     icon: ClipboardList,
@@ -86,6 +94,8 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
+  const location = useLocation();
+
   return (
     <Sidebar className="bg-muted/20">
       <SidebarHeader className="p-4">
@@ -103,22 +113,34 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild
-                    className={currentView === item.view ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}
-                  >
-                    <button 
-                      onClick={() => onViewChange(item.view)}
-                      className="flex items-center gap-2 w-full"
+              {adminMenuItems.map((item) => {
+                const isActive = (item.url.startsWith('/') && location.pathname.startsWith(item.url)) ||
+                                 (currentView === item.view && !item.url.startsWith('/'));
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild
+                      className={isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}
                     >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      {item.url.startsWith('/') ? (
+                        <RouterLink to={item.url} className="flex items-center gap-2 w-full">
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.title}</span>
+                        </RouterLink>
+                      ) : (
+                        <button 
+                          onClick={() => onViewChange(item.view)}
+                          className="flex items-center gap-2 w-full"
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.title}</span>
+                        </button>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
