@@ -9,205 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      addresses: {
-        Row: {
-          address_line1: string
-          address_line2: string | null
-          address_type: Database["public"]["Enums"]["address_type"]
-          city: string
-          created_at: string | null
-          created_by: string | null
-          id: string
-          is_active: boolean | null
-          landmark: string | null
-          pincode: string
-          state: string
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          address_line1: string
-          address_line2?: string | null
-          address_type: Database["public"]["Enums"]["address_type"]
-          city: string
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          landmark?: string | null
-          pincode: string
-          state: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          address_line1?: string
-          address_line2?: string | null
-          address_type?: Database["public"]["Enums"]["address_type"]
-          city?: string
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          landmark?: string | null
-          pincode?: string
-          state?: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      clients: {
-        Row: {
-          bill_to_address_id: string | null
-          client_code: string
-          company_registration_number: string | null
-          contact_person1_name: string | null
-          contact_person1_phone: string | null
-          contact_person2_name: string | null
-          contact_person2_phone: string | null
-          created_at: string | null
-          created_by: string | null
-          gst_number: string | null
-          id: string
-          is_active: boolean | null
-          is_igst: boolean | null
-          name: string
-          office_phone_number: string | null
-          registered_office_address_id: string
-          ship_to_address_id: string | null
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          bill_to_address_id?: string | null
-          client_code: string
-          company_registration_number?: string | null
-          contact_person1_name?: string | null
-          contact_person1_phone?: string | null
-          contact_person2_name?: string | null
-          contact_person2_phone?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          gst_number?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_igst?: boolean | null
-          name: string
-          office_phone_number?: string | null
-          registered_office_address_id: string
-          ship_to_address_id?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          bill_to_address_id?: string | null
-          client_code?: string
-          company_registration_number?: string | null
-          contact_person1_name?: string | null
-          contact_person1_phone?: string | null
-          contact_person2_name?: string | null
-          contact_person2_phone?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          gst_number?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_igst?: boolean | null
-          name?: string
-          office_phone_number?: string | null
-          registered_office_address_id?: string
-          ship_to_address_id?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_bill_to_address"
-            columns: ["bill_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_bill_to_address"
-            columns: ["bill_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["billing_address_id"]
-          },
-          {
-            foreignKeyName: "fk_bill_to_address"
-            columns: ["bill_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["registered_office_address_id"]
-          },
-          {
-            foreignKeyName: "fk_bill_to_address"
-            columns: ["bill_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["shipping_address_id"]
-          },
-          {
-            foreignKeyName: "fk_registered_office_address"
-            columns: ["registered_office_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_registered_office_address"
-            columns: ["registered_office_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["billing_address_id"]
-          },
-          {
-            foreignKeyName: "fk_registered_office_address"
-            columns: ["registered_office_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["registered_office_address_id"]
-          },
-          {
-            foreignKeyName: "fk_registered_office_address"
-            columns: ["registered_office_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["shipping_address_id"]
-          },
-          {
-            foreignKeyName: "fk_ship_to_address"
-            columns: ["ship_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_ship_to_address"
-            columns: ["ship_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["billing_address_id"]
-          },
-          {
-            foreignKeyName: "fk_ship_to_address"
-            columns: ["ship_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["registered_office_address_id"]
-          },
-          {
-            foreignKeyName: "fk_ship_to_address"
-            columns: ["ship_to_address_id"]
-            isOneToOne: false
-            referencedRelation: "client_details"
-            referencedColumns: ["shipping_address_id"]
-          },
-        ]
-      }
       compound_ingredients: {
         Row: {
           compound_id: string
@@ -704,95 +505,19 @@ export type Database = {
       }
     }
     Views: {
-      client_details: {
-        Row: {
-          billing_address_id: string | null
-          billing_address_line1: string | null
-          billing_address_line2: string | null
-          billing_address_type:
-            | Database["public"]["Enums"]["address_type"]
-            | null
-          billing_city: string | null
-          billing_landmark: string | null
-          billing_pincode: string | null
-          billing_state: string | null
-          client_code: string | null
-          company_registration_number: string | null
-          contact_person1_name: string | null
-          contact_person1_phone: string | null
-          contact_person2_name: string | null
-          contact_person2_phone: string | null
-          created_at: string | null
-          created_by: string | null
-          gst_number: string | null
-          id: string | null
-          is_active: boolean | null
-          is_igst: boolean | null
-          name: string | null
-          office_phone_number: string | null
-          registered_office_address_id: string | null
-          registered_office_address_line1: string | null
-          registered_office_address_line2: string | null
-          registered_office_address_type:
-            | Database["public"]["Enums"]["address_type"]
-            | null
-          registered_office_city: string | null
-          registered_office_landmark: string | null
-          registered_office_pincode: string | null
-          registered_office_state: string | null
-          shipping_address_id: string | null
-          shipping_address_line1: string | null
-          shipping_address_line2: string | null
-          shipping_address_type:
-            | Database["public"]["Enums"]["address_type"]
-            | null
-          shipping_city: string | null
-          shipping_landmark: string | null
-          shipping_pincode: string | null
-          shipping_state: string | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      create_client_with_addresses: {
-        Args: {
-          client_data: Json
-          registered_office_address: Json
-          bill_to_address?: Json
-          ship_to_address?: Json
-        }
-        Returns: Json
-      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_admin: {
-        Args: Record<PropertyKey, never> | { user_id: string }
+        Args: { user_id: string }
         Returns: boolean
-      }
-      update_client_with_addresses: {
-        Args: {
-          client_id: string
-          client_data: Json
-          registered_office_address?: Json
-          bill_to_address?: Json
-          ship_to_address?: Json
-        }
-        Returns: Json
       }
     }
     Enums: {
-      address_type:
-        | "SHIPTO"
-        | "BILLTO"
-        | "REGD"
-        | "COMM"
-        | "BRANCH"
-        | "PERSONAL"
-        | "OTHER"
       user_role: "admin" | "staff"
       work_order_status:
         | "CREATED"
@@ -917,15 +642,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      address_type: [
-        "SHIPTO",
-        "BILLTO",
-        "REGD",
-        "COMM",
-        "BRANCH",
-        "PERSONAL",
-        "OTHER",
-      ],
       user_role: ["admin", "staff"],
       work_order_status: [
         "CREATED",

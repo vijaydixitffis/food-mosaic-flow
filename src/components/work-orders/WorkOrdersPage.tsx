@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -287,7 +288,6 @@ export function WorkOrdersPage() {
             remarks: viewingDeliveryFor.remarks || '',
             status: viewingDeliveryFor.status,
             products: viewingDeliveryFor.work_order_products.map(p => ({
-              id: p.id,
               product_id: p.product_id,
               total_weight: p.total_weight,
               number_of_pouches: p.number_of_pouches,

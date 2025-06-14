@@ -1,25 +1,20 @@
-
-import { useNavigate, useParams } from 'react-router-dom';
+import { useRouter } from 'next/router';
+import { NextPageWithLayout } from '@/types';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ClientForm } from '@/components/clients/forms/ClientForm';
 import { useClients } from '@/hooks/useClients';
 import { toast } from '@/components/ui/use-toast';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const EditClientPage = () => {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+const EditClientPage: NextPageWithLayout = () => {
+  const router = useRouter();
+  const { id } = router.query;
   const { updateClient, useClient } = useClients();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  if (!id) {
-    return <div>Client not found</div>;
-  }
-  
-  const { data: client, isLoading } = useClient(id);
+  const { data: client, isLoading } = useClient(id as string);
 
   const handleSubmit = async (data: any) => {
-    if (!id) return;
+    if (!id || Array.isArray(id)) return;
     
     try {
       setIsSubmitting(true);
@@ -28,7 +23,7 @@ const EditClientPage = () => {
         title: 'Client updated',
         description: 'The client has been updated successfully.',
       });
-      navigate(`/clients/${id}`);
+      router.push(`/clients/${id}`);
     } catch (error) {
       console.error('Error updating client:', error);
       toast({
@@ -50,19 +45,19 @@ const EditClientPage = () => {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Edit Client</h1>
-        </div>
-        <ClientForm
-          initialData={client}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Edit Client</h1>
       </div>
-    </AppLayout>
+      <ClientForm
+        initialData={client}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      />
+    </div>
   );
 };
+
+EditClientPage.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default EditClientPage;

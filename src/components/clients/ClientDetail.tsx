@@ -1,15 +1,13 @@
-
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, ArrowLeft } from 'lucide-react';
-import { formatDate } from '@/lib/date';
-import { useClients } from '@/hooks/useClients';
+import { formatDate } from '@/lib/utils';
+import { useClient } from '@/hooks/useClients';
 
 export function ClientDetail({ id }: { id: string }) {
-  const navigate = useNavigate();
-  const { useClient } = useClients();
+  const router = useRouter();
   const { data: client, isLoading, error } = useClient(id);
 
   if (isLoading) return <div>Loading client details...</div>;
@@ -43,13 +41,13 @@ export function ClientDetail({ id }: { id: string }) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(-1)}
+          onClick={() => router.back()}
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Clients
         </Button>
         <Button
-          onClick={() => navigate(`/clients/${client.id}/edit`)}
+          onClick={() => router.push(`/clients/${client.id}/edit`)}
           className="gap-1"
         >
           <Pencil className="h-4 w-4" /> Edit

@@ -1,16 +1,15 @@
-
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import { useClients } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
-import { formatDate } from '@/lib/date';
+import { formatDate } from '@/lib/utils';
 
 export function ClientList() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const { clients, isLoading, deleteClient } = useClients();
 
@@ -36,7 +35,7 @@ export function ClientList() {
             <CardTitle>Clients</CardTitle>
             <CardDescription>Manage your clients and their information</CardDescription>
           </div>
-          <Button onClick={() => navigate('/clients/new')}>
+          <Button onClick={() => router.push('/clients/new')}>
             <Plus className="mr-2 h-4 w-4" /> Add Client
           </Button>
         </div>
@@ -77,7 +76,7 @@ export function ClientList() {
               ) : (
                 filteredClients.map((client) => (
                   <TableRow key={client.id} className="hover:bg-muted/50 cursor-pointer" 
-                    onClick={() => navigate(`/clients/${client.id}`)}>
+                    onClick={() => router.push(`/clients/${client.id}`)}>
                     <TableCell className="font-medium">{client.client_code}</TableCell>
                     <TableCell>{client.name}</TableCell>
                     <TableCell>{client.gst_number || '-'}</TableCell>
@@ -87,7 +86,7 @@ export function ClientList() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => navigate(`/clients/${client.id}/edit`)}
+                        onClick={() => router.push(`/clients/${client.id}/edit`)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
