@@ -1,19 +1,20 @@
-import { useRouter } from 'next/router';
-import { NextPageWithLayout } from '@/types';
+
+import { useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ClientDetail } from '@/components/clients/ClientDetail';
 
-const ClientDetailPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const { id } = router.query;
+const ClientDetailPage = () => {
+  const { id } = useParams<{ id: string }>();
 
-  if (!id || Array.isArray(id)) {
+  if (!id) {
     return <div>Client not found</div>;
   }
 
-  return <ClientDetail id={id} />;
+  return (
+    <AppLayout>
+      <ClientDetail id={id} />
+    </AppLayout>
+  );
 };
-
-ClientDetailPage.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default ClientDetailPage;

@@ -1,13 +1,13 @@
+
 import { useState } from 'react';
-import { useRouter } from 'next/router';
-import { NextPageWithLayout } from '@/types';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ClientForm } from '@/components/clients/forms/ClientForm';
 import { useClients } from '@/hooks/useClients';
 import { toast } from '@/components/ui/use-toast';
 
-const NewClientPage: NextPageWithLayout = () => {
-  const router = useRouter();
+const NewClientPage = () => {
+  const navigate = useNavigate();
   const { createClient } = useClients();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -19,7 +19,7 @@ const NewClientPage: NextPageWithLayout = () => {
         title: 'Client created',
         description: 'The client has been created successfully.',
       });
-      router.push('/clients');
+      navigate('/clients');
     } catch (error) {
       console.error('Error creating client:', error);
       toast({
@@ -33,19 +33,19 @@ const NewClientPage: NextPageWithLayout = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Add New Client</h1>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Add New Client</h1>
+        </div>
+        <ClientForm
+          initialData={null}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
       </div>
-      <ClientForm
-        initialData={null}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-      />
-    </div>
+    </AppLayout>
   );
 };
-
-NewClientPage.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default NewClientPage;
