@@ -70,6 +70,16 @@ export function ClientsPage() {
 
         if (error) throw error;
       } else {
+        // Ensure client_code is unique before insert
+        const { data: existing, error: checkError } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('client_code', clientData.client_code)
+          .maybeSingle();
+        if (checkError) throw checkError;
+        if (existing) {
+          throw new Error('Client code must be unique. A client with this code already exists.');
+        }
         // Ensure all required fields are present for insert
         const insertData: ClientInsert = {
           client_code: clientData.client_code!,
@@ -82,6 +92,7 @@ export function ClientsPage() {
           gst_number: clientData.gst_number!,
           is_igst: clientData.is_igst ?? false,
           is_active: clientData.is_active ?? true,
+          discount: clientData.discount ?? 0,
         };
 
         const { error } = await supabase

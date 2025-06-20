@@ -557,6 +557,95 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          id: string;
+          order_code: string;
+          remarks: string | null;
+          order_date: string;
+          target_delivery_date: string;
+          client_id: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_code: string;
+          remarks?: string | null;
+          order_date: string;
+          target_delivery_date: string;
+          client_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_code?: string;
+          remarks?: string | null;
+          order_date?: string;
+          target_delivery_date?: string;
+          client_id?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      order_products: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          pouch_size: number;
+          number_of_pouches: number;
+          total_weight: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          pouch_size: number;
+          number_of_pouches: number;
+          total_weight: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          product_id?: string;
+          pouch_size?: number;
+          number_of_pouches?: number;
+          total_weight?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_products_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_products_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     }
     Views: {
       [_ in never]: never

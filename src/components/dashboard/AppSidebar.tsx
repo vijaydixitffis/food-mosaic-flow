@@ -61,6 +61,12 @@ const adminMenuItems = [
     view: "clients",
   },
   {
+    title: "Orders",
+    url: "#",
+    icon: ShoppingCart,
+    view: "orders",
+  },
+  {
     title: "Work Orders",
     url: "#",
     icon: ClipboardList,

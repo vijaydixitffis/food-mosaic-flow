@@ -5,6 +5,7 @@ import { ProductsPage } from '@/components/products/ProductsPage';
 import { RecipesPage } from '@/components/recipes/RecipesPage';
 import { WorkOrdersPage } from '@/components/work-orders/WorkOrdersPage';
 import { ClientsPage } from '@/components/clients/ClientsPage';
+import { OrdersPage } from '@/components/orders/OrdersPage';
 
 interface DashboardContentProps {
   currentView: string;
@@ -95,6 +96,8 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
         return <ClientsPage />;
       case 'work-orders':
         return <WorkOrdersPage />;
+      case 'orders':
+        return <OrdersPage />;
       case 'pricing':
         return (
           <div className="text-center py-12">
