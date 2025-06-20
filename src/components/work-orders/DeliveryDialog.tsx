@@ -43,19 +43,21 @@ export function DeliveryDialog({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isReadOnly ? 'View Delivery Details' : 'Delivery Details'}
+            {isReadOnly ? 'View Delivery Details' : 'Delivery Details'}{workOrder?.name ? ` - WO Code: ${workOrder.name}` : ''}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="inventory">
+              {workOrder?.name ? `Inventory - ${workOrder.name}` : 'Inventory'}
+            </TabsTrigger>
             <TabsTrigger 
               value="recipes" 
               disabled={!canProceedToRecipes}
               className={!canProceedToRecipes ? 'opacity-50' : ''}
             >
-              Recipes
+              {workOrder?.name ? `Recipes - ${workOrder.name}` : 'Recipes'}
             </TabsTrigger>
           </TabsList>
 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
@@ -14,6 +13,7 @@ import { z } from 'zod';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  hsn_code: z.string().min(1, 'HSN code is required'),
   description: z.string().optional(),
   pack_type: z.string().optional(),
   client_note: z.string().optional(),
@@ -37,6 +37,20 @@ export function ProductBasicInfoForm({ form }: ProductBasicInfoFormProps) {
               <FormLabel>Name *</FormLabel>
               <FormControl>
                 <Input placeholder="Enter product name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="hsn_code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>HSN Code *</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter HSN code" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

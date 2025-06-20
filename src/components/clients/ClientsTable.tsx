@@ -50,9 +50,9 @@ export function ClientsTable({
           <TableRow>
             <TableHead>Client Code</TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Discount</TableHead>
             <TableHead>Contact Person</TableHead>
             <TableHead>Office Phone</TableHead>
-            <TableHead>GST Number</TableHead>
             <TableHead>GST Type</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
@@ -63,9 +63,9 @@ export function ClientsTable({
             <TableRow key={client.id}>
               <TableCell className="font-medium">{client.client_code}</TableCell>
               <TableCell>{client.name}</TableCell>
+              <TableCell>{client.discount != null ? `${client.discount}%` : '-'}</TableCell>
               <TableCell>{client.contact_person}</TableCell>
               <TableCell>{client.office_phone_number}</TableCell>
-              <TableCell>{client.gst_number}</TableCell>
               <TableCell>
                 <Badge variant={client.is_igst ? "default" : "secondary"}>
                   {client.is_igst ? "IGST" : "CGST/SGST"}

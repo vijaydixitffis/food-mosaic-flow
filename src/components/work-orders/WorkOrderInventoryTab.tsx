@@ -21,12 +21,29 @@ interface WorkOrderInventoryTabProps {
   isReadOnly: boolean;
 }
 
-interface IngredientRequirement {
-  ingredient_id: string;
-  ingredient_name: string;
-  total_quantity: number;
+interface ProductInfo {
+  id: string;
+  name: string;
+  total_weight: number;
+  number_of_pouches: number;
+  pouch_size: number;
+}
+
+// Helper function to convert to kg if the unit is grams
+const convertToKg = (value: number, unit: string): number => {
+  return unit?.toLowerCase() === 'g' || unit?.toLowerCase() === 'gms' 
+    ? value / 1000 
+    : value;
+};
+
+interface IngredientInfo {
+  id: string;
+  name: string;
   unit_of_measurement: string;
-  rate_per_kg: number | null;
+  quantities: {
+    [productId: string]: number; // productId -> quantity in kg
+  };
+  total_quantity: number; // in kg
 }
 
 export function WorkOrderInventoryTab({
@@ -35,16 +52,32 @@ export function WorkOrderInventoryTab({
   onPrevious,
   isReadOnly,
 }: WorkOrderInventoryTabProps) {
-  // Fetch ingredients needed for all selected products
-  const { data: ingredientRequirements = [], isLoading } = useQuery({
-    queryKey: ['work-order-ingredients', formData.products.map(p => p.product_id)],
+  // Fetch detailed product information and ingredient requirements
+  const { data, isLoading } = useQuery({
+    queryKey: ['work-order-ingredients-matrix', formData.products],
     queryFn: async () => {
-      if (formData.products.length === 0) return [];
+      if (formData.products.length === 0) return { products: [], ingredients: [] };
 
+      // Get product details
       const productIds = formData.products.map(p => p.product_id);
-      
-      // Get ingredients from products
-      const { data: productIngredients, error: productError } = await supabase
+      const { data: productDetails, error: productError } = await supabase
+        .from('products')
+        .select('id, name')
+        .in('id', productIds);
+
+      if (productError) throw productError;
+
+      // Create product info map with pouch information
+      const products: ProductInfo[] = formData.products.map(wop => ({
+        id: wop.product_id,
+        name: productDetails?.find(p => p.id === wop.product_id)?.name || `Product ${wop.product_id}`,
+        total_weight: wop.total_weight,
+        number_of_pouches: wop.number_of_pouches,
+        pouch_size: wop.pouch_size
+      }));
+
+      // Get all ingredients from products and compounds
+      const { data: productIngredients, error: piError } = await supabase
         .from('product_ingredients')
         .select(`
           ingredient_id,
@@ -53,16 +86,15 @@ export function WorkOrderInventoryTab({
           ingredients:ingredient_id (
             id,
             name,
-            unit_of_measurement,
-            rate
+            unit_of_measurement
           )
         `)
         .in('product_id', productIds);
 
-      if (productError) throw productError;
+      if (piError) throw piError;
 
-      // Get ingredients from compounds used in products
-      const { data: productCompounds, error: compoundError } = await supabase
+      // Get compound ingredients
+      const { data: productCompounds, error: pcError } = await supabase
         .from('product_compounds')
         .select(`
           compound_id,
@@ -77,80 +109,92 @@ export function WorkOrderInventoryTab({
               ingredients:ingredient_id (
                 id,
                 name,
-                unit_of_measurement,
-                rate
+                unit_of_measurement
               )
             )
           )
         `)
         .in('product_id', productIds);
 
-      if (compoundError) throw compoundError;
+      if (pcError) throw pcError;
 
-      // Calculate total ingredient requirements
-      const ingredientMap = new Map<string, IngredientRequirement>();
+      // Initialize ingredient map
+      const ingredientMap = new Map<string, IngredientInfo>();
 
       // Process direct product ingredients
       productIngredients?.forEach(pi => {
-        const workOrderProduct = formData.products.find(p => p.product_id === pi.product_id);
-        if (!workOrderProduct || !pi.ingredients) return;
-
-        const totalQuantity = pi.quantity * workOrderProduct.total_weight;
-        const ingredientId = pi.ingredient_id;
+        if (!pi.ingredients) return;
         
-        if (ingredientMap.has(ingredientId)) {
-          const existing = ingredientMap.get(ingredientId)!;
-          existing.total_quantity += totalQuantity;
-        } else {
+        const product = products.find(p => p.id === pi.product_id);
+        if (!product) return;
+
+        const ingredientId = pi.ingredient_id;
+        const unit = pi.ingredients.unit_of_measurement || 'kg';
+        // Calculate total ingredient weight using the formula: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
+        const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
+        const totalIngredientWeight = (pi.quantity || 0) * totalProductWeight;
+        const quantityInKg = convertToKg(totalIngredientWeight, unit);
+        
+        if (!ingredientMap.has(ingredientId)) {
           ingredientMap.set(ingredientId, {
-            ingredient_id: ingredientId,
-            ingredient_name: pi.ingredients.name,
-            total_quantity: totalQuantity,
-            unit_of_measurement: pi.ingredients.unit_of_measurement || 'kg',
-            rate_per_kg: pi.ingredients.rate,
+            id: ingredientId,
+            name: pi.ingredients.name,
+            unit_of_measurement: 'kg', // Always use kg after conversion
+            quantities: {},
+            total_quantity: 0
           });
         }
+        
+        const ingredient = ingredientMap.get(ingredientId)!;
+        ingredient.quantities[product.id] = (ingredient.quantities[product.id] || 0) + quantityInKg;
+        ingredient.total_quantity += quantityInKg;
       });
 
       // Process compound ingredients
-      if (productCompounds) {
-        for (const pc of productCompounds) {
-          const workOrderProduct = formData.products.find(p => p.product_id === pc.product_id);
-          if (!workOrderProduct || !pc.compounds) continue;
-          
-          const compoundIngredients = pc.compounds.compound_ingredients;
-          if (!Array.isArray(compoundIngredients)) continue;
-          
-          const compoundQuantity = pc.quantity || 0;
-          
-          for (const ci of compoundIngredients) {
-            if (!ci.ingredients) continue;
-            
-            const totalQuantity = (ci.quantity || 0) * compoundQuantity * (workOrderProduct.total_weight || 1);
-            const ingredientId = ci.ingredient_id;
-            
-            if (ingredientMap.has(ingredientId)) {
-              const existing = ingredientMap.get(ingredientId)!;
-              existing.total_quantity += totalQuantity;
-            } else {
-              ingredientMap.set(ingredientId, {
-                ingredient_id: ingredientId,
-                ingredient_name: ci.ingredients?.name || 'Unknown Ingredient',
-                total_quantity: totalQuantity,
-                unit_of_measurement: ci.ingredients?.unit_of_measurement || 'kg',
-                rate_per_kg: ci.ingredients?.rate || 0,
-              });
-            }
-          }
-        }
-      }
+      productCompounds?.forEach(pc => {
+        if (!pc.compounds || !Array.isArray(pc.compounds.compound_ingredients)) return;
+        
+        const product = products.find(p => p.id === pc.product_id);
+        if (!product) return;
 
-      return Array.from(ingredientMap.values()).sort((a, b) => 
-        a.ingredient_name.localeCompare(b.ingredient_name)
+        pc.compounds.compound_ingredients.forEach(ci => {
+          if (!ci.ingredients) return;
+          
+          const ingredientId = ci.ingredient_id;
+          const unit = ci.ingredients.unit_of_measurement || 'kg';
+          // Calculate total ingredient weight using the formula: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
+          // Note: pc.quantity is already accounted for in the product weight calculation
+          const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
+          const totalIngredientWeight = (ci.quantity || 0) * totalProductWeight;
+          const quantityInKg = convertToKg(totalIngredientWeight, unit);
+          
+          if (!ingredientMap.has(ingredientId)) {
+            ingredientMap.set(ingredientId, {
+              id: ingredientId,
+              name: ci.ingredients.name,
+              unit_of_measurement: 'kg', // Always use kg after conversion
+              quantities: {},
+              total_quantity: 0
+            });
+          }
+          
+          const ingredient = ingredientMap.get(ingredientId)!;
+          ingredient.quantities[product.id] = (ingredient.quantities[product.id] || 0) + quantityInKg;
+          ingredient.total_quantity += quantityInKg;
+        });
+      });
+
+      // Convert map to array and sort by ingredient name
+      const ingredients = Array.from(ingredientMap.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
       );
+
+      return { products, ingredients };
     },
     enabled: formData.products.length > 0,
   });
+
+  const { products = [], ingredients = [] } = data || {};
 
   if (formData.products.length === 0) {
     return (
@@ -191,48 +235,70 @@ export function WorkOrderInventoryTab({
           <div className="text-center py-8 text-gray-500">
             Loading ingredient requirements...
           </div>
-        ) : ingredientRequirements.length === 0 ? (
+        ) : ingredients.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No ingredients found for the selected products.
           </div>
         ) : (
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ingredient</TableHead>
-                  <TableHead className="text-right">Quantity Required</TableHead>
-                  <TableHead className="text-right">Rate (₹/kg)</TableHead>
-                  <TableHead className="text-right">Cost (₹)</TableHead>
+                  <TableHead className="min-w-[200px]">Ingredient</TableHead>
+                  {products.map(product => (
+                    <TableHead key={product.id} className="text-right min-w-[150px]">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="text-xs text-gray-500">
+                          {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(2)} kg
+                        </span>
+                      </div>
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
+                    <div className="flex flex-col">
+                      <span>Total Required</span>
+                      <span className="text-xs text-gray-500">kg</span>
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ingredientRequirements.map((ingredient) => (
-                  <TableRow key={ingredient.ingredient_id}>
+                {ingredients.map((ingredient) => (
+                  <TableRow key={ingredient.id}>
                     <TableCell className="font-medium">
-                      {ingredient.ingredient_name}
+                      {ingredient.name}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {ingredient.total_quantity.toFixed(2)} {ingredient.unit_of_measurement}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ingredient.rate_per_kg ? `₹${ingredient.rate_per_kg.toFixed(2)}` : '-'}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {ingredient.rate_per_kg 
-                        ? (() => {
-                            // Always convert to kg for consistent calculation
-                            const quantityInKg = ingredient.unit_of_measurement?.toLowerCase() === 'gms' 
-                              ? ingredient.total_quantity / 1000 
-                              : ingredient.total_quantity;
-                            // Calculate cost based on rate per kg
-                            const cost = quantityInKg * ingredient.rate_per_kg;
-                            return `₹${cost.toFixed(2)}`;
-                          })()
-                        : '-'}
+                    {products.map(product => (
+                      <TableCell key={`${ingredient.id}-${product.id}`} className="text-right">
+                        {ingredient.quantities[product.id]?.toFixed(2) || '-'}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-medium bg-gray-50">
+                      {ingredient.total_quantity.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
+                {/* Totals row */}
+                <TableRow className="bg-gray-50">
+                  <TableCell className="font-medium">
+                    <span>Total</span>
+                  </TableCell>
+                  {products.map(product => {
+                    const total = ingredients.reduce(
+                      (sum, ing) => sum + (ing.quantities[product.id] || 0), 
+                      0
+                    );
+                    return (
+                      <TableCell key={`total-${product.id}`} className="text-right font-medium">
+                        {total.toFixed(2)}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right font-bold">
+                    {ingredients.reduce((sum, ing) => sum + ing.total_quantity, 0).toFixed(2)}
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </div>

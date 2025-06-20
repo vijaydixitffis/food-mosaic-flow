@@ -51,6 +51,7 @@ type ProductWithIngredients = Product & {
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  hsn_code: z.string().min(1, 'HSN code is required'),
   description: z.string().optional(),
   pack_type: z.string().optional(),
   client_note: z.string().optional(),
@@ -93,6 +94,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
+      hsn_code: '',
       description: '',
       pack_type: '',
       client_note: '',
@@ -136,6 +138,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
     if (product) {
       form.reset({
         name: product.name,
+        hsn_code: product.hsn_code || '',
         description: product.description || '',
         pack_type: product.pack_type || '',
         client_note: product.client_note || '',
@@ -160,6 +163,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
     } else {
       form.reset({
         name: '',
+        hsn_code: '',
         description: '',
         pack_type: '',
         client_note: '',
@@ -185,6 +189,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
       
       const productData = {
         name: formData.name,
+        hsn_code: formData.hsn_code,
         description: formData.description || null,
         pack_type: formData.pack_type || null,
         client_note: formData.client_note || null,

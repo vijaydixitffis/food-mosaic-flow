@@ -39,6 +39,7 @@ export function ClientDialog({
     gst_number: '',
     is_igst: false,
     is_active: true,
+    discount: 0,
   });
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export function ClientDialog({
         gst_number: '',
         is_igst: false,
         is_active: true,
+        discount: 0,
       });
     }
   }, [client]);
@@ -189,6 +191,29 @@ export function ClientDialog({
                 onChange={(e) => setFormData({ ...formData, contact_person_phone_number: e.target.value })}
                 disabled={isReadOnly}
                 required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="discount">Discount (%)</Label>
+              <Input
+                id="discount"
+                type="number"
+                min={0}
+                max={100}
+                step={0.01}
+                value={formData.discount ?? 0}
+                onChange={(e) => {
+                  let value = Number(e.target.value);
+                  if (value < 0) value = 0;
+                  if (value > 100) value = 100;
+                  setFormData({ ...formData, discount: value });
+                }}
+                disabled={isReadOnly}
+                required
+                placeholder="0-100"
               />
             </div>
           </div>

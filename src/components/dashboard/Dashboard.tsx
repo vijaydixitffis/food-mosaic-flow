@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,14 +38,20 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="fixed inset-0 flex w-full h-full">
         <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
         <SidebarInset>
-          <DashboardHeader profile={profile} onSignOut={handleSignOut} />
-          <main className="flex-1 p-6">
-            <DashboardContent currentView={currentView} onViewChange={handleViewChange} />
-          </main>
-          <DashboardFooter />
+          <div className="flex flex-col h-full min-h-0">
+            <div className="sticky top-0 z-30">
+              <DashboardHeader profile={profile} onSignOut={handleSignOut} />
+            </div>
+            <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-muted/20">
+              <DashboardContent currentView={currentView} onViewChange={handleViewChange} />
+            </main>
+            <div className="sticky bottom-0 z-30">
+              <DashboardFooter />
+            </div>
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>

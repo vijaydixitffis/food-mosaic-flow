@@ -61,12 +61,6 @@ const adminMenuItems = [
     view: "clients",
   },
   {
-    title: "Pricing",
-    url: "#",
-    icon: IndianRupee,
-    view: "pricing",
-  },
-  {
     title: "Work Orders",
     url: "#",
     icon: ClipboardList,

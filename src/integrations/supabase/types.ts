@@ -201,6 +201,7 @@ export type Database = {
           client_note: string | null
           created_at: string
           description: string | null
+          hsn_code: string
           id: string
           name: string
           pack_type: string | null
@@ -214,6 +215,7 @@ export type Database = {
           client_note?: string | null
           created_at?: string
           description?: string | null
+          hsn_code: string
           id?: string
           name: string
           pack_type?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           client_note?: string | null
           created_at?: string
           description?: string | null
+          hsn_code?: string
           id?: string
           name?: string
           pack_type?: string | null
@@ -499,6 +502,57 @@ export type Database = {
           name?: string
           remarks?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          id: string
+          client_code: string
+          name: string
+          office_address: string
+          company_registration_number: string
+          office_phone_number: string
+          contact_person: string
+          contact_person_phone_number: string
+          gst_number: string
+          is_igst: boolean
+          is_active: boolean
+          discount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_code: string
+          name: string
+          office_address: string
+          company_registration_number: string
+          office_phone_number: string
+          contact_person: string
+          contact_person_phone_number: string
+          gst_number: string
+          is_igst?: boolean
+          is_active?: boolean
+          discount: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_code?: string
+          name?: string
+          office_address?: string
+          company_registration_number?: string
+          office_phone_number?: string
+          contact_person?: string
+          contact_person_phone_number?: string
+          gst_number?: string
+          is_igst?: boolean
+          is_active?: boolean
+          discount?: number
+          created_at?: string
           updated_at?: string
         }
         Relationships: []

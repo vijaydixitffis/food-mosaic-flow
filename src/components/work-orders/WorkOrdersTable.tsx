@@ -94,7 +94,7 @@ export function WorkOrdersTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>WO Code</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Products</TableHead>

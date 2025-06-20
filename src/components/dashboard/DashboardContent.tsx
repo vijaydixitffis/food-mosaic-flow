@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
 import { CompoundsPage } from '@/components/compounds/CompoundsPage';
 import { ProductsPage } from '@/components/products/ProductsPage';
 import { RecipesPage } from '@/components/recipes/RecipesPage';
 import { WorkOrdersPage } from '@/components/work-orders/WorkOrdersPage';
+import { ClientsPage } from '@/components/clients/ClientsPage';
 
 interface DashboardContentProps {
   currentView: string;
@@ -62,6 +62,14 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
               
               <div 
                 className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
+                onClick={() => onViewChange('clients')}
+              >
+                <h3 className="text-xl font-semibold text-foreground mb-2">Clients</h3>
+                <p className="text-muted-foreground">Manage your clients and their information</p>
+              </div>
+              
+              <div 
+                className="bg-card p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
                 onClick={() => onViewChange('work-orders')}
               >
                 <h3 className="text-xl font-semibold text-foreground mb-2">Work Orders</h3>
@@ -83,6 +91,8 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
         return <ProductsPage />;
       case 'recipes':
         return <RecipesPage />;
+      case 'clients':
+        return <ClientsPage />;
       case 'work-orders':
         return <WorkOrdersPage />;
       case 'pricing':
@@ -117,7 +127,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
   };
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="bg-muted/20">
       {renderContent()}
     </div>
   );
