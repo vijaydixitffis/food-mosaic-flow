@@ -1,4 +1,90 @@
-# Welcome to your Lovable project
+# FoodMosaic - Food Production Management System
+
+A comprehensive food production management system designed to help businesses execute recipes and ship products efficiently.
+
+## 🎨 Design System
+
+FoodMosaic features a modern, clean design with:
+
+- **Color Scheme**: Green and orange gradients representing freshness and energy
+- **Logo**: Custom utensils icon with FoodMosaic branding
+- **Typography**: Clean, readable fonts with proper hierarchy
+- **Layout**: Responsive design with intuitive navigation
+
+## 🚀 Features
+
+### Core Modules
+- **Ingredients Management**: Track raw ingredients and their properties
+- **Compounds**: Create and manage ingredient compounds
+- **Products**: Manage final products and compositions
+- **Recipes**: Create and manage production recipes
+- **Clients**: Manage client information and relationships
+- **Orders**: Process and track customer orders
+- **Work Orders**: Create and track production work orders
+- **Reports**: Analytics and insights (Coming Soon)
+- **Invoices**: Billing and invoicing (Coming Soon)
+
+### Key Features
+- Role-based access control (Admin/Staff)
+- Real-time data synchronization with Supabase
+- Searchable interfaces for all modules
+- Responsive design for all devices
+- Modern UI with smooth animations
+
+## 🛠️ Technology Stack
+
+- **Frontend**: React 18 + TypeScript
+- **UI Framework**: Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **State Management**: TanStack Query
+- **Icons**: Lucide React
+- **Build Tool**: Vite
+
+## 🎯 Design Philosophy
+
+FoodMosaic follows the principle of "Execute recipes and ship well" - emphasizing efficiency, quality, and reliability in food production management. The design reflects this through:
+
+- **Efficiency**: Streamlined workflows and intuitive interfaces
+- **Quality**: Clean, professional design that builds trust
+- **Reliability**: Robust data management and real-time updates
+
+## 🎨 Color Palette
+
+- **Primary Green**: #22c55e (Fresh, Growth)
+- **Primary Orange**: #f97316 (Energy, Warmth)
+- **Neutral Slate**: #64748b (Professional, Clean)
+- **Background**: White with subtle gradients
+- **Accents**: Various gradient combinations for visual hierarchy
+
+## 📱 Responsive Design
+
+The application is fully responsive and optimized for:
+- Desktop computers
+- Tablets
+- Mobile phones
+- Touch interfaces
+
+## 🔧 Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## 📄 License
+
+© 2024 FoodMosaic. All rights reserved.
+
+Powered by Future Focus IT Solutions
 
 ## Project info
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ClientsTable } from './ClientsTable';
@@ -23,40 +23,104 @@ export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const { toast } = useToast();
-  const { isStaff, isAdmin } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
+
+  console.log('ClientsPage - Auth Debug:', {
+    user: user?.id,
+    profile: profile?.role,
+    isStaff,
+    isAdmin,
+    userEmail: user?.email
+  });
 
   // Fetch clients with pagination
   const { data: clientsData, isLoading, error } = useQuery({
     queryKey: ['clients', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      // First, get total count
-      let countQuery = supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true });
+      console.log('ClientsPage - Starting query with auth state:', {
+        userId: user?.id,
+        userRole: profile?.role,
+        isAuthenticated: !!user
+      });
 
-      if (searchTerm) {
-        countQuery = countQuery.or(`name.ilike.%${searchTerm}%,client_code.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%`);
+      try {
+        let query = supabase
+          .from('clients')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (searchTerm) {
+          query = query.or(`name.ilike.%${searchTerm}%,client_code.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%`);
+        }
+
+        console.log('ClientsPage - About to execute count query');
+        
+        // Get total count for pagination
+        let countQuery = supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true });
+
+        if (searchTerm) {
+          countQuery = countQuery.or(`name.ilike.%${searchTerm}%,client_code.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%`);
+        }
+
+        const { count, error: countError } = await countQuery;
+
+        if (countError) {
+          console.error('ClientsPage - Count query error:', {
+            error: countError,
+            message: countError.message,
+            details: countError.details,
+            hint: countError.hint,
+            code: countError.code
+          });
+          throw countError;
+        }
+
+        console.log('ClientsPage - Count query successful, count:', count);
+        console.log('ClientsPage - About to execute data query with pagination');
+
+        // Get paginated results
+        const { data, error } = await query
+          .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+        if (error) {
+          console.error('ClientsPage - Data query error:', {
+            error: error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw error;
+        }
+
+        console.log('ClientsPage - Data query successful:', {
+          dataLength: data?.length,
+          totalCount: count,
+          sampleData: data?.[0]
+        });
+
+        return {
+          clients: data as Client[],
+          total: count || 0
+        };
+      } catch (err) {
+        console.error('ClientsPage - Query function error:', err);
+        throw err;
       }
-
-      const { count } = await countQuery;
-
-      // Then, get paginated data
-      let query = supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
-
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,client_code.ilike.%${searchTerm}%,contact_person.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return { data, count: count || 0 };
     },
+  });
+
+  console.log('ClientsPage - Query state:', {
+    isLoading,
+    error: error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    } : null,
+    hasData: !!clientsData
   });
 
   // Create/Update client mutation
@@ -119,12 +183,12 @@ export function ClientsPage() {
     },
   });
 
-  // Deactivate client mutation
-  const deactivateMutation = useMutation({
-    mutationFn: async (clientId: string) => {
+  // Toggle client active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ clientId, isActive }: { clientId: string; isActive: boolean }) => {
       const { error } = await supabase
         .from('clients')
-        .update({ is_active: false })
+        .update({ is_active: isActive })
         .eq('id', clientId);
 
       if (error) throw error;
@@ -133,13 +197,13 @@ export function ClientsPage() {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({
         title: "Success",
-        description: "Client deactivated successfully",
+        description: "Client status updated successfully",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to deactivate client: " + error.message,
+        description: "Failed to update client status: " + error.message,
         variant: "destructive",
       });
     },
@@ -171,7 +235,7 @@ export function ClientsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDeactivateClient = (clientId: string) => {
+  const handleToggleActive = (clientId: string, currentActive: boolean) => {
     if (isStaff) {
       toast({
         title: "Access Restricted",
@@ -180,9 +244,7 @@ export function ClientsPage() {
       });
       return;
     }
-    if (confirm('Are you sure you want to deactivate this client?')) {
-      deactivateMutation.mutate(clientId);
-    }
+    toggleActiveMutation.mutate({ clientId, isActive: !currentActive });
   };
 
   const handleSubmit = (formData: Partial<Client>) => {
@@ -198,18 +260,23 @@ export function ClientsPage() {
     setCurrentPage(1); // Reset to first page when changing page size
   };
 
-  const totalPages = Math.ceil((clientsData?.count || 0) / pageSize);
+  const totalPages = Math.ceil((clientsData?.total || 0) / pageSize);
 
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-8 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isStaff ? 'View Clients' : 'Manage Clients'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {isStaff ? 'View client information' : 'Create and manage client information'}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Users className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Clients' : 'Manage Clients'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View client information' : 'Create and manage client information'}
+            </p>
+          </div>
         </div>
         {!isStaff && (
           <Button onClick={handleAddClient} className="flex items-center gap-2">
@@ -235,15 +302,21 @@ export function ClientsPage() {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <h3 className="text-red-800 font-medium">Error loading clients</h3>
           <p className="text-red-600 text-sm mt-1">{error.message}</p>
+          <details className="mt-2">
+            <summary className="text-red-600 text-sm cursor-pointer">Debug Details</summary>
+            <pre className="text-xs text-red-500 mt-1 whitespace-pre-wrap">
+              {JSON.stringify(error, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
       {/* Clients Table */}
       <ClientsTable
-        clients={clientsData?.data || []}
+        clients={clientsData?.clients || []}
         isLoading={isLoading}
         onEdit={handleEditClient}
-        onDeactivate={handleDeactivateClient}
+        onToggleActive={handleToggleActive}
         isReadOnly={isStaff}
       />
 
@@ -253,7 +326,7 @@ export function ClientsPage() {
           currentPage={currentPage}
           totalPages={totalPages}
           pageSize={pageSize}
-          totalItems={clientsData.count}
+          totalItems={clientsData.total}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />

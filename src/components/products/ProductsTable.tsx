@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
+import { Edit, Eye } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -26,6 +25,58 @@ type ProductWithIngredients = Product & {
     };
   }>;
 };
+
+interface StatusSliderProps {
+  isActive: boolean;
+  onToggle: () => void;
+  productName: string;
+  disabled?: boolean;
+}
+
+function StatusSlider({ isActive, onToggle, productName, disabled = false }: StatusSliderProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    
+    if (isActive) {
+      // If currently active and trying to deactivate, show confirmation
+      const confirmed = window.confirm(
+        `Are you sure you want to deactivate "${productName}"? This will make the product unavailable for orders.`
+      );
+      if (confirmed) {
+        onToggle();
+      }
+    } else {
+      // If currently inactive and trying to activate, proceed directly
+      onToggle();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleToggle}
+        disabled={disabled}
+        className={`
+          relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+          ${isActive 
+            ? 'bg-green-600 hover:bg-green-700' 
+            : 'bg-gray-200 hover:bg-gray-300'
+          }
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <span
+          className={`
+            inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+            ${isActive ? 'translate-x-6' : 'translate-x-1'}
+          `}
+        />
+      </button>
+    </div>
+  );
+}
 
 interface ProductsTableProps {
   products: ProductWithIngredients[];
@@ -88,7 +139,6 @@ export function ProductsTable({
             <TableHead>Description</TableHead>
             <TableHead>Sale Price</TableHead>
             <TableHead>Tags</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,12 +160,13 @@ export function ProductsTable({
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={product.active ? "default" : "secondary"}>
-                  {product.active ? 'Active' : 'Inactive'}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between">
+                  <StatusSlider
+                    isActive={product.active}
+                    onToggle={() => onToggleActive(product.id, product.active)}
+                    productName={product.name}
+                    disabled={isReadOnly}
+                  />
                   <Button
                     variant="outline"
                     size="sm"
@@ -125,21 +176,6 @@ export function ProductsTable({
                     {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
                     {isReadOnly ? 'View' : 'Edit'}
                   </Button>
-                  {!isReadOnly && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onToggleActive(product.id, product.active)}
-                      className="flex items-center gap-1"
-                    >
-                      {product.active ? (
-                        <ToggleRight className="w-3 h-3" />
-                      ) : (
-                        <ToggleLeft className="w-3 h-3" />
-                      )}
-                      {product.active ? 'Deactivate' : 'Activate'}
-                    </Button>
-                  )}
                 </div>
               </TableCell>
             </TableRow>

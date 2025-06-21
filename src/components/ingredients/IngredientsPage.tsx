@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { Plus, Carrot } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -185,24 +185,84 @@ export function IngredientsPage() {
   if (error) {
     console.error('Rendering error state:', error);
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-red-600">
-              Error loading ingredients: {error.message}
+      <div className="px-6 py-8 space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Carrot className="w-6 h-6 text-white" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {isStaff ? 'View ingredient information' : 'Create and manage ingredient information'}
+              </p>
+            </div>
+          </div>
+          {!isStaff && (
+            <Button onClick={handleAddIngredient} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Ingredient
+            </Button>
+          )}
+        </div>
+
+        {/* Search */}
+        <IngredientsSearch searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+
+        {/* Error Display */}
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading ingredients</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+        </div>
+
+        {/* Ingredients Table */}
+        <IngredientsTable
+          ingredients={paginatedIngredients}
+          isLoading={isLoading}
+          onEdit={handleEditIngredient}
+          onDeactivate={handleDeactivateIngredient}
+          isReadOnly={isStaff}
+        />
+
+        {/* Pagination */}
+        <IngredientsPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredIngredients.length}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+
+        {/* Ingredient Dialog */}
+        <IngredientDialog
+          isOpen={isDialogOpen}
+          onClose={handleDialogClose}
+          ingredient={editingIngredient}
+          isReadOnly={isStaff}
+        />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
-        </h1>
+    <div className="px-6 py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Carrot className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View ingredient information' : 'Create and manage ingredient information'}
+            </p>
+          </div>
+        </div>
         {!isStaff && (
           <Button onClick={handleAddIngredient} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -211,49 +271,37 @@ export function IngredientsPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Ingredients List</CardTitle>
-            <IngredientsSearch 
-              searchTerm={searchTerm}
-              onSearchChange={handleSearchChange}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              Total ingredients: {ingredients.length} | 
-              Filtered: {filteredIngredients.length} | 
-              Showing: {paginatedIngredients.length} |
-              Loading: {isLoading ? 'Yes' : 'No'}
-              {searchTerm && (
-                <span className="ml-2 text-blue-600">
-                  (Searching for: "{searchTerm}")
-                </span>
-              )}
-            </p>
-          </div>
-          <IngredientsTable
-            ingredients={paginatedIngredients}
-            isLoading={isLoading}
-            onEdit={handleEditIngredient}
-            onDeactivate={handleDeactivateIngredient}
-            isReadOnly={isStaff}
-          />
-          
-          <IngredientsPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={filteredIngredients.length}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        </CardContent>
-      </Card>
+      {/* Search */}
+      <IngredientsSearch searchTerm={searchTerm} onSearchChange={handleSearchChange} />
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading ingredients</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+        </div>
+      )}
+
+      {/* Ingredients Table */}
+      <IngredientsTable
+        ingredients={paginatedIngredients}
+        isLoading={isLoading}
+        onEdit={handleEditIngredient}
+        onDeactivate={handleDeactivateIngredient}
+        isReadOnly={isStaff}
+      />
+
+      {/* Pagination */}
+      <IngredientsPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={filteredIngredients.length}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+
+      {/* Ingredient Dialog */}
       <IngredientDialog
         isOpen={isDialogOpen}
         onClose={handleDialogClose}

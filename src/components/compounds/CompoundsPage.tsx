@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Layers } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CompoundsTable } from './CompoundsTable';
 import { CompoundDialog } from './CompoundDialog';
@@ -38,7 +38,7 @@ export function CompoundsPage() {
   const { isAdmin, isStaff } = useAuth();
 
   // Fetch compounds with their ingredients
-  const { data: compoundsData, isLoading } = useQuery({
+  const { data: compoundsData, isLoading, error } = useQuery({
     queryKey: ['compounds', searchTerm, currentPage, pageSize],
     queryFn: async () => {
       let query = supabase
@@ -215,18 +215,28 @@ export function CompoundsPage() {
   const totalItems = compoundsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
 
+  const handleSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['compounds'] });
+    setIsDialogOpen(false);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-8 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isStaff ? 'View Compounds' : 'Manage Compounds'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {isAdmin ? 'Create and manage compound ingredients' : 'View compound ingredients'}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Layers className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Compounds' : 'Manage Compounds'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View compound information' : 'Create and manage compound information'}
+            </p>
+          </div>
         </div>
-        {isAdmin && (
+        {!isStaff && (
           <Button onClick={handleAddCompound} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Compound
@@ -245,6 +255,14 @@ export function CompoundsPage() {
         />
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading compounds</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+        </div>
+      )}
+
       {/* Compounds Table */}
       <CompoundsTable
         compounds={compounds}
@@ -252,31 +270,28 @@ export function CompoundsPage() {
         onEdit={handleEditCompound}
         onDelete={handleDeleteCompound}
         onToggleActive={handleToggleActive}
-        isAdmin={isAdmin}
+        isAdmin={!isStaff}
       />
 
       {/* Pagination */}
-      <CompoundsPagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
-
-      {/* Compound Dialog - only show for admins */}
-      {isAdmin && (
-        <CompoundDialog
-          isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
-          compound={editingCompound}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['compounds'] });
-            setIsDialogOpen(false);
-          }}
+      {compoundsData && (
+        <CompoundsPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
       )}
+
+      {/* Compound Dialog */}
+      <CompoundDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        compound={editingCompound}
+        onSuccess={handleSubmit}
+      />
     </div>
   );
 }

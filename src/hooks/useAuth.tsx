@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isStaff: boolean;
@@ -104,6 +104,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      if (data.user) {
+        // Check if user has a profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          await supabase.auth.signOut();
+          return { error: { message: 'No profile found for this user. Please contact an administrator.' } };
+        }
+
+        if (!profile.active) {
+          await supabase.auth.signOut();
+          return { error: { message: 'Your account has been deactivated. Please contact an administrator.' } };
+        }
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: { message: 'An unexpected error occurred. Please try again.' } };
+    }
+  };
+
   const signOut = async () => {
     console.log('Signing out');
     await supabase.auth.signOut();
@@ -115,6 +151,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     profile,
     loading,
+    signIn,
     signOut,
     isAdmin: profile?.role === 'admin',
     isStaff: profile?.role === 'staff',

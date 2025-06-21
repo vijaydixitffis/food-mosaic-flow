@@ -1,60 +1,49 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { AppSidebar } from './AppSidebar';
+import { DashboardHeader } from './DashboardHeader';
+import { DashboardFooter } from './DashboardFooter';
+import { DashboardContent } from './DashboardContent';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut } from 'lucide-react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/dashboard/AppSidebar';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { DashboardFooter } from '@/components/dashboard/DashboardFooter';
-import { DashboardContent } from '@/components/dashboard/DashboardContent';
+import { supabase } from '@/integrations/supabase/client';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const Dashboard = () => {
-  const { profile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('home');
-
-  console.log('Dashboard component rendered, currentView:', currentView);
-  console.log('Profile:', profile);
+  const { profile, signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   const handleViewChange = (view: string) => {
-    console.log('Dashboard handleViewChange called with:', view);
     setCurrentView(view);
   };
 
-  if (!profile) {
-    console.log('No profile found, this should redirect to login');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading...</h2>
-          <p>Please wait while we load your profile.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <SidebarProvider>
-      <div className="fixed inset-0 flex w-full h-full">
-        <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
-        <SidebarInset>
-          <div className="flex flex-col h-full min-h-0">
-            <div className="sticky top-0 z-30">
-              <DashboardHeader profile={profile} onSignOut={handleSignOut} />
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto shadow-xl min-h-screen" style={{
+        background: 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.3), rgba(255, 247, 237, 0.3), rgba(254, 242, 242, 0.3))'
+      }}>
+        <SidebarProvider>
+          <div className="flex h-screen overflow-hidden">
+            <div className="fixed lg:static inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+              <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
             </div>
-            <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-muted/20">
-              <DashboardContent currentView={currentView} onViewChange={handleViewChange} />
-            </main>
-            <div className="sticky bottom-0 z-30">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <DashboardHeader 
+                profile={profile} 
+                onSignOut={handleSignOut}
+                currentView={currentView}
+              />
+              <main className="flex-1 overflow-y-auto">
+                <DashboardContent currentView={currentView} onViewChange={handleViewChange} />
+              </main>
               <DashboardFooter />
             </div>
           </div>
-        </SidebarInset>
+        </SidebarProvider>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,6 +18,56 @@ type Recipe = Database['public']['Tables']['recipes']['Row'] & {
     compounds: { name: string } | null;
   }>;
 };
+
+interface StatusSliderProps {
+  isActive: boolean;
+  onToggle: () => void;
+  recipeName: string;
+  disabled?: boolean;
+}
+
+function StatusSlider({ isActive, onToggle, recipeName, disabled = false }: StatusSliderProps) {
+  const handleToggle = () => {
+    if (disabled) return;
+    
+    if (isActive) {
+      // If currently active and trying to deactivate, show confirmation
+      const confirmed = window.confirm(
+        `Are you sure you want to deactivate "${recipeName}"? This will make the recipe unavailable for work orders.`
+      );
+      if (confirmed) {
+        onToggle();
+      }
+    } else {
+      // If currently inactive and trying to activate, proceed directly
+      onToggle();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleToggle}
+        disabled={disabled}
+        className={`
+          relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+          ${isActive 
+            ? 'bg-green-600 hover:bg-green-700' 
+            : 'bg-gray-200 hover:bg-gray-300'
+          }
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <span
+          className={`
+            inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+            ${isActive ? 'translate-x-6' : 'translate-x-1'}
+          `}
+        />
+      </button>
+    </div>
+  );
+}
 
 interface RecipesTableProps {
   recipes: Recipe[];
@@ -82,9 +131,8 @@ export function RecipesTable({ recipes, onEdit, onRefresh, isAdmin }: RecipesTab
           <TableHead>Products</TableHead>
           <TableHead>Compounds</TableHead>
           <TableHead>Instructions</TableHead>
-          <TableHead>Status</TableHead>
           <TableHead>Created</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -126,31 +174,25 @@ export function RecipesTable({ recipes, onEdit, onRefresh, isAdmin }: RecipesTab
               </span>
             </TableCell>
             <TableCell>
-              <Badge variant={recipe.active ? "default" : "secondary"}>
-                {recipe.active ? "Active" : "Inactive"}
-              </Badge>
-            </TableCell>
-            <TableCell>
               {new Date(recipe.created_at).toLocaleDateString()}
             </TableCell>
-            <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-2">
+            <TableCell>
+              <div className="flex items-center justify-between">
+                <StatusSlider
+                  isActive={recipe.active}
+                  onToggle={() => handleToggleActive(recipe)}
+                  recipeName={recipe.name}
+                  disabled={!isAdmin}
+                />
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => onEdit(recipe)}
+                  className="flex items-center gap-1"
                 >
-                  {isAdmin ? <Edit className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {isAdmin ? <Edit className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {isAdmin ? 'Edit' : 'View'}
                 </Button>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleActive(recipe)}
-                  >
-                    {recipe.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                )}
               </div>
             </TableCell>
           </TableRow>

@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Factory } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { WorkOrdersTable } from './WorkOrdersTable';
 import { WorkOrderDialog } from './WorkOrderDialog';
@@ -36,61 +35,119 @@ export function WorkOrdersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrderWithProducts | null>(null);
-  const [viewingDeliveryFor, setViewingDeliveryFor] = useState<WorkOrderWithProducts | null>(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrderWithProducts | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
+
+  console.log('WorkOrdersPage - Auth Debug:', {
+    user: user?.id,
+    profile: profile?.role,
+    isStaff,
+    isAdmin,
+    userEmail: user?.email
+  });
 
   // Fetch work orders with their products
   const { data: workOrdersData, isLoading, error } = useQuery({
     queryKey: ['work-orders', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      let query = supabase
-        .from('work_orders')
-        .select(`
-          *,
-          work_order_products (
-            id,
-            product_id,
-            total_weight,
-            number_of_pouches,
-            pouch_size,
-            products (
+      console.log('WorkOrdersPage - Starting query with auth state:', {
+        userId: user?.id,
+        userRole: profile?.role,
+        isAuthenticated: !!user
+      });
+
+      try {
+        let query = supabase
+          .from('work_orders')
+          .select(`
+            *,
+            work_order_products (
               id,
-              name
+              product_id,
+              total_weight,
+              number_of_pouches,
+              pouch_size,
+              products (
+                id,
+                name
+              )
             )
-          )
-        `)
-        .order('created_at', { ascending: false });
+          `)
+          .order('created_at', { ascending: false });
 
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        if (searchTerm) {
+          query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,remarks.ilike.%${searchTerm}%`);
+        }
+
+        console.log('WorkOrdersPage - About to execute count query');
+        
+        // Get total count for pagination
+        let countQuery = supabase
+          .from('work_orders')
+          .select('*', { count: 'exact', head: true });
+
+        if (searchTerm) {
+          countQuery = countQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,remarks.ilike.%${searchTerm}%`);
+        }
+
+        const { count, error: countError } = await countQuery;
+
+        if (countError) {
+          console.error('WorkOrdersPage - Count query error:', {
+            error: countError,
+            message: countError.message,
+            details: countError.details,
+            hint: countError.hint,
+            code: countError.code
+          });
+          throw countError;
+        }
+
+        console.log('WorkOrdersPage - Count query successful, count:', count);
+        console.log('WorkOrdersPage - About to execute data query with pagination');
+
+        // Get paginated results
+        const { data, error } = await query
+          .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+        if (error) {
+          console.error('WorkOrdersPage - Data query error:', {
+            error: error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw error;
+        }
+
+        console.log('WorkOrdersPage - Data query successful:', {
+          dataLength: data?.length,
+          totalCount: count,
+          sampleData: data?.[0]
+        });
+
+        return {
+          workOrders: data as WorkOrderWithProducts[],
+          total: count || 0
+        };
+      } catch (err) {
+        console.error('WorkOrdersPage - Query function error:', err);
+        throw err;
       }
-
-      // Get total count for pagination
-      let countQuery = supabase
-        .from('work_orders')
-        .select('*', { count: 'exact', head: true });
-
-      if (searchTerm) {
-        countQuery = countQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-      }
-
-      const { count, error: countError } = await countQuery;
-
-      if (countError) throw countError;
-
-      // Get paginated results
-      const { data, error } = await query
-        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
-
-      if (error) throw error;
-
-      return {
-        workOrders: data as WorkOrderWithProducts[],
-        total: count || 0
-      };
     },
+  });
+
+  console.log('WorkOrdersPage - Query state:', {
+    isLoading,
+    error: error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    } : null,
+    hasData: !!workOrdersData
   });
 
   // Delete work order mutation
@@ -159,6 +216,14 @@ export function WorkOrdersPage() {
   };
 
   const handleEditWorkOrder = (workOrder: WorkOrderWithProducts) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view work orders",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingWorkOrder(workOrder);
     setIsDialogOpen(true);
   };
@@ -172,7 +237,7 @@ export function WorkOrdersPage() {
       });
       return;
     }
-    if (confirm('Are you sure you want to delete this work order?')) {
+    if (window.confirm('Are you sure you want to delete this work order?')) {
       deleteWorkOrderMutation.mutate(workOrderId);
     }
   };
@@ -189,6 +254,11 @@ export function WorkOrdersPage() {
     updateStatusMutation.mutate({ workOrderId, status: status as WorkOrderStatus });
   };
 
+  const handleViewDelivery = (workOrder: WorkOrderWithProducts) => {
+    setSelectedWorkOrder(workOrder);
+    setIsDeliveryDialogOpen(true);
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -203,15 +273,16 @@ export function WorkOrdersPage() {
   const totalPages = Math.ceil(totalItems / pageSize);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isStaff ? 'View Work Orders' : 'Manage Work Orders'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {isStaff ? 'View work order information and status' : 'Create and manage work orders'}
-          </p>
+    <div className="px-6 py-8 space-y-6">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Factory className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Work Orders</h1>
+            <p className="text-slate-600">Create and manage production work orders</p>
+          </div>
         </div>
         {!isStaff && (
           <Button onClick={handleAddWorkOrder} className="flex items-center gap-2">
@@ -225,7 +296,7 @@ export function WorkOrdersPage() {
       <div className="relative">
         <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search work orders by name or description..."
+          placeholder="Search work orders by name, description, or remarks..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -237,6 +308,12 @@ export function WorkOrdersPage() {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <h3 className="text-red-800 font-medium">Error loading work orders</h3>
           <p className="text-red-600 text-sm mt-1">{error.message}</p>
+          <details className="mt-2">
+            <summary className="text-red-600 text-sm cursor-pointer">Debug Details</summary>
+            <pre className="text-xs text-red-500 mt-1 whitespace-pre-wrap">
+              {JSON.stringify(error, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
@@ -247,10 +324,7 @@ export function WorkOrdersPage() {
         onEdit={handleEditWorkOrder}
         onDelete={handleDeleteWorkOrder}
         onUpdateStatus={handleUpdateStatus}
-        onViewDelivery={(workOrder) => {
-          setViewingDeliveryFor(workOrder);
-          setIsDeliveryDialogOpen(true);
-        }}
+        onViewDelivery={handleViewDelivery}
         isReadOnly={isStaff}
       />
 
@@ -277,28 +351,29 @@ export function WorkOrdersPage() {
       />
 
       {/* Delivery Dialog */}
-      {viewingDeliveryFor && (
+      {selectedWorkOrder && (
         <DeliveryDialog
           isOpen={isDeliveryDialogOpen}
           onClose={() => setIsDeliveryDialogOpen(false)}
-          workOrder={viewingDeliveryFor}
+          workOrder={selectedWorkOrder}
           formData={{
-            name: viewingDeliveryFor.name,
-            description: viewingDeliveryFor.description || '',
-            remarks: viewingDeliveryFor.remarks || '',
-            status: viewingDeliveryFor.status,
-            products: viewingDeliveryFor.work_order_products.map(p => ({
+            name: selectedWorkOrder.name,
+            description: selectedWorkOrder.description || '',
+            remarks: selectedWorkOrder.remarks || '',
+            status: selectedWorkOrder.status,
+            products: selectedWorkOrder.work_order_products.map(p => ({
+              id: p.id,
               product_id: p.product_id,
               total_weight: p.total_weight,
               number_of_pouches: p.number_of_pouches,
-              pouch_size: p.pouch_size
-            }))
+              pouch_size: p.pouch_size,
+            })) || [],
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['work-orders'] });
             setIsDeliveryDialogOpen(false);
           }}
-          isReadOnly={true}
+          isReadOnly={isStaff}
         />
       )}
     </div>

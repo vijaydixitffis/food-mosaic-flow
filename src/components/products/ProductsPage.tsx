@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductsTable } from './ProductsTable';
 import { ProductDialog } from './ProductDialog';
@@ -274,15 +274,20 @@ export function ProductsPage() {
   const totalPages = Math.ceil(totalItems / pageSize);
 
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-8 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isStaff ? 'View Products' : 'Manage Products'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {isStaff ? 'View product information' : 'Create and manage your products'}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Package className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Products' : 'Manage Products'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View product information' : 'Create and manage product information'}
+            </p>
+          </div>
         </div>
         {!isStaff && (
           <Button onClick={handleAddProduct} className="flex items-center gap-2">

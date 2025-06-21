@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,14 +34,12 @@ interface WorkOrderReviewTabProps {
   isReadOnly: boolean;
 }
 
-const statusColors: Record<WorkOrderStatus, string> = {
-  CREATED: 'bg-gray-100 text-gray-800',
-  PROCURED: 'bg-blue-100 text-blue-800',
-  'IN-STOCK': 'bg-green-100 text-green-800',
-  PROCESSED: 'bg-yellow-100 text-yellow-800',
-  SHIPPED: 'bg-purple-100 text-purple-800',
-  EXECUTED: 'bg-orange-100 text-orange-800',
-  COMPLETE: 'bg-emerald-100 text-emerald-800',
+const statusStyles = {
+  DRAFT: 'bg-slate-100 text-slate-800',
+  IN_PROGRESS: 'bg-orange-100 text-orange-800',
+  COMPLETED: 'bg-green-100 text-green-800',
+  CANCELLED: 'bg-red-100 text-red-800',
+  PROCURED: 'bg-amber-100 text-amber-800',
 };
 
 export function WorkOrderReviewTab({
@@ -159,7 +156,7 @@ export function WorkOrderReviewTab({
               <dd className="mt-1">
                 <Badge
                   variant="secondary"
-                  className={statusColors[formData.status]}
+                  className={statusStyles[formData.status]}
                 >
                   {formData.status}
                 </Badge>

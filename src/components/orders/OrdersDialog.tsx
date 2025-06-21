@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { ORDER_STATUSES, ORDER_STATUS_DISPLAY_NAMES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
 
 // Predefined pouch sizes in grams (copied from WorkOrderProductsTab)
@@ -24,20 +25,30 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     target_delivery_date: '',
     client: null,
     products: [],
-    status: 'NEW',
+    status: ORDER_STATUSES.NEW,
   });
 
   // Re-initialize formData when editing a different order
   useEffect(() => {
     if (order) {
+      // Map order_products to the expected products structure
+      const mappedProducts = (order.order_products || []).map((op, index) => ({
+        id: op.id || `item-${index + 1}`,
+        product_id: op.product_id,
+        pouch_size: op.pouch_size,
+        number_of_pouches: op.number_of_pouches,
+        total_weight: op.total_weight,
+        product_name: op.products?.name || '',
+      }));
+
       setFormData({
         order_code: order.order_code || '',
         remarks: order.remarks || '',
         order_date: order.order_date || '',
         target_delivery_date: order.target_delivery_date || '',
-        client: order.client || null,
-        products: order.products || [],
-        status: order.status || 'NEW',
+        client: order.clients || null,
+        products: mappedProducts,
+        status: order.status || ORDER_STATUSES.NEW,
       });
     } else {
       setFormData({
@@ -47,7 +58,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         target_delivery_date: '',
         client: null,
         products: [],
-        status: 'NEW',
+        status: ORDER_STATUSES.NEW,
       });
     }
   }, [order]);
@@ -336,13 +347,22 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="status">Status</label>
-                  <Input
-                    id="status"
+                  <Select
                     value={formData.status}
-                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
                     disabled={isReadOnly}
-                    required
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ORDER_STATUSES).map(([key, value]) => (
+                        <SelectItem key={value} value={value}>
+                          {ORDER_STATUS_DISPLAY_NAMES[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-2 mt-4">

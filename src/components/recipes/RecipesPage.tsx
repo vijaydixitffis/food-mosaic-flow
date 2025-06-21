@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, BookOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { RecipesTable } from './RecipesTable';
@@ -18,135 +17,156 @@ type Recipe = Database['public']['Tables']['recipes']['Row'];
 const RECIPES_PER_PAGE = 10;
 
 export function RecipesPage() {
-  const { isAdmin, isStaff } = useAuth();
+  const { isAdmin, isStaff, user, profile } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(RECIPES_PER_PAGE);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const queryClient = useQueryClient();
 
-  console.log('RecipesPage rendered, isAdmin:', isAdmin, 'isStaff:', isStaff);
+  console.log('RecipesPage - Auth Debug:', {
+    user: user?.id,
+    profile: profile?.role,
+    isStaff,
+    isAdmin,
+    userEmail: user?.email
+  });
 
-  const { data: recipesData, isLoading, refetch } = useQuery({
-    queryKey: ['recipes', searchTerm, currentPage],
+  const { data: recipesData, isLoading, error } = useQuery({
+    queryKey: ['recipes', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      console.log('Fetching recipes with search term:', searchTerm);
-      
+      console.log('RecipesPage - Starting query with auth state:', {
+        userId: user?.id,
+        userRole: profile?.role,
+        isAuthenticated: !!user
+      });
+
       try {
-        // First, find all recipe IDs that match our search criteria
-        let recipeIds = new Set<string>();
-        
-        // 1. Search in recipe name and description
-        if (searchTerm) {
-          console.log('Searching in recipe names and descriptions...');
-          const { data: recipeSearch, error: recipeError } = await supabase
-            .from('recipes')
-            .select('id')
-            .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-            
-          if (recipeError) throw recipeError;
-          recipeSearch?.forEach(recipe => recipeIds.add(recipe.id));
-          console.log('Found matching recipes by name/desc:', recipeSearch?.length);
-          
-          // 2. Search in recipe instructions
-          console.log('Searching in recipe instructions...');
-          const { data: instructionSearch, error: instructionError } = await supabase
-            .from('recipe_instructions')
-            .select('recipe_id')
-            .ilike('instruction_text', `%${searchTerm}%`);
-            
-          if (instructionError) throw instructionError;
-          instructionSearch?.forEach(inst => recipeIds.add(inst.recipe_id));
-          console.log('Found matching recipes by instructions:', instructionSearch?.length);
-          
-          // 3. Search in products
-          console.log('Searching in products...');
-          const { data: productSearch, error: productError } = await supabase
-            .from('products')
-            .select('id')
-            .ilike('name', `%${searchTerm}%`);
-            
-          if (productError) throw productError;
-          
-          if (productSearch?.length) {
-            const productIds = productSearch.map(p => p.id);
-            const { data: recipeProductSearch, error: rpError } = await supabase
-              .from('recipe_products')
-              .select('recipe_id')
-              .in('product_id', productIds);
-              
-            if (rpError) throw rpError;
-            recipeProductSearch?.forEach(rp => recipeIds.add(rp.recipe_id));
-            console.log('Found matching recipes by products:', recipeProductSearch?.length);
-          }
-          
-          // 4. Search in compounds
-          console.log('Searching in compounds...');
-          const { data: compoundSearch, error: compoundError } = await supabase
-            .from('compounds')
-            .select('id')
-            .ilike('name', `%${searchTerm}%`);
-            
-          if (compoundError) throw compoundError;
-          
-          if (compoundSearch?.length) {
-            const compoundIds = compoundSearch.map(c => c.id);
-            const { data: recipeCompoundSearch, error: rcError } = await supabase
-              .from('recipe_compounds')
-              .select('recipe_id')
-              .in('compound_id', compoundIds);
-              
-            if (rcError) throw rcError;
-            recipeCompoundSearch?.forEach(rc => recipeIds.add(rc.recipe_id));
-            console.log('Found matching recipes by compounds:', recipeCompoundSearch?.length);
-          }
-          
-          console.log('Total unique recipe matches:', recipeIds.size);
-        }
-        
-        // Now fetch the full recipe data with all relationships
         let query = supabase
           .from('recipes')
           .select(`
             *,
-            recipe_instructions(*),
-            recipe_products(
-              product_id,
-              products(name)
+            recipe_instructions (
+              id,
+              instruction_text,
+              sequence_number
             ),
-            recipe_compounds(
+            recipe_products (
+              product_id,
+              products (
+                id,
+                name
+              )
+            ),
+            recipe_compounds (
               compound_id,
-              compounds(name)
+              compounds (
+                id,
+                name
+              )
             )
-          `, { count: 'exact' })
-          .order('created_at', { ascending: false });
-          
-        // If we have search results, filter by the matching recipe IDs
-        if (recipeIds.size > 0) {
-          query = query.in('id', Array.from(recipeIds));
-        } else if (searchTerm) {
-          // If we had a search term but no matches, return empty results
-          return { recipes: [], totalCount: 0, totalPages: 0 };
+          `)
+          .order('name', { ascending: true });
+
+        if (searchTerm) {
+          query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
         }
 
-        const from = (currentPage - 1) * RECIPES_PER_PAGE;
-        const to = from + RECIPES_PER_PAGE - 1;
-
-        const { data, error, count } = await query.range(from, to);
+        console.log('RecipesPage - About to execute count query');
         
-        if (error) throw error;
+        // Get total count for pagination
+        let countQuery = supabase
+          .from('recipes')
+          .select('*', { count: 'exact', head: true });
 
-        console.log('Fetched recipes:', data);
+        if (searchTerm) {
+          countQuery = countQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        }
+
+        const { count, error: countError } = await countQuery;
+
+        if (countError) {
+          console.error('RecipesPage - Count query error:', {
+            error: countError,
+            message: countError.message,
+            details: countError.details,
+            hint: countError.hint,
+            code: countError.code
+          });
+          throw countError;
+        }
+
+        console.log('RecipesPage - Count query successful, count:', count);
+        console.log('RecipesPage - About to execute data query with pagination');
+
+        // Get paginated results
+        const { data, error } = await query
+          .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+        if (error) {
+          console.error('RecipesPage - Data query error:', {
+            error: error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw error;
+        }
+
+        console.log('RecipesPage - Data query successful:', {
+          dataLength: data?.length,
+          totalCount: count,
+          sampleData: data?.[0]
+        });
+
         return {
-          recipes: data || [],
-          totalCount: count || 0,
-          totalPages: Math.ceil((count || 0) / RECIPES_PER_PAGE)
+          recipes: data as Recipe[],
+          total: count || 0
         };
-      } catch (error) {
-        console.error('Error in recipes query:', error);
-        throw error;
+      } catch (err) {
+        console.error('RecipesPage - Query function error:', err);
+        throw err;
       }
-    }
+    },
+  });
+
+  console.log('RecipesPage - Query state:', {
+    isLoading,
+    error: error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    } : null,
+    hasData: !!recipesData
+  });
+
+  // Toggle active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ recipeId, active }: { recipeId: string; active: boolean }) => {
+      const { error } = await supabase
+        .from('recipes')
+        .update({ active })
+        .eq('id', recipeId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      toast({
+        title: "Success",
+        description: "Recipe status updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update recipe status: " + error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const handleCreateRecipe = () => {
@@ -158,95 +178,104 @@ export function RecipesPage() {
       });
       return;
     }
-    console.log('Creating new recipe');
-    setSelectedRecipe(null);
+    setEditingRecipe(null);
     setIsDialogOpen(true);
   };
 
   const handleEditRecipe = (recipe: Recipe) => {
-    console.log('Editing recipe:', recipe);
-    setSelectedRecipe(recipe);
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view recipes",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEditingRecipe(recipe);
     setIsDialogOpen(true);
   };
 
   const handleDialogClose = () => {
     setIsDialogOpen(false);
-    setSelectedRecipe(null);
-    refetch();
+    setEditingRecipe(null);
   };
 
   const handleSearch = (value: string) => {
-    console.log('Searching recipes with term:', value);
     setSearchTerm(value);
     setCurrentPage(1);
   };
 
+  const recipes = recipesData?.recipes || [];
+  const totalItems = recipesData?.total || 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {isStaff ? 'View Recipes' : 'Recipes'}
-          </h2>
-          <p className="text-muted-foreground">
-            {isStaff ? 'View recipes and manufacturing instructions' : 'Manage your recipes and manufacturing instructions'}
-          </p>
+    <div className="px-6 py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+            <BookOpen className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Recipes' : 'Manage Recipes'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View recipe information' : 'Create and manage recipe information'}
+            </p>
+          </div>
         </div>
         {!isStaff && (
-          <Button onClick={handleCreateRecipe}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={handleCreateRecipe} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
             Add Recipe
           </Button>
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recipe Management</CardTitle>
-          <CardDescription>
-            {isStaff ? 'View all recipes in your system' : 'Search and manage all recipes in your system'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search recipes by name, description, products, compounds, or instructions..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+        <Input
+          placeholder="Search recipes by name or description..."
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">Loading recipes...</div>
-            </div>
-          ) : (
-            <>
-              <RecipesTable
-                recipes={recipesData?.recipes || []}
-                onEdit={handleEditRecipe}
-                onRefresh={refetch}
-                isAdmin={isAdmin}
-              />
-              
-              {recipesData && recipesData.totalPages > 1 && (
-                <RecipesPagination
-                  currentPage={currentPage}
-                  totalPages={recipesData.totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading recipes</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+          <details className="mt-2">
+            <summary className="text-red-600 text-sm cursor-pointer">Debug Details</summary>
+            <pre className="text-xs text-red-500 mt-1 whitespace-pre-wrap">
+              {JSON.stringify(error, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
 
+      {/* Recipes Table */}
+      <RecipesTable
+        recipes={recipes}
+        onEdit={handleEditRecipe}
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['recipes'] })}
+        isAdmin={!isStaff}
+      />
+
+      {/* Pagination */}
+      <RecipesPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+
+      {/* Recipe Dialog */}
       <RecipeDialog
-        recipe={selectedRecipe}
+        recipe={editingRecipe}
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
         isReadOnly={isStaff}

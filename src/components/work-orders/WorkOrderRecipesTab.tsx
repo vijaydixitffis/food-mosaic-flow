@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -259,7 +258,7 @@ export function WorkOrderRecipesTab({
                       <ol className="space-y-2">
                         {recipe.recipe_instructions.map((instruction) => (
                           <li key={instruction.id} className="flex gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-medium">
+                            <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-sm font-medium">
                               {instruction.sequence_number}
                             </span>
                             <span className="text-sm">{instruction.instruction_text}</span>
