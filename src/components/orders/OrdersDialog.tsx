@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import type { Database } from '@/integrations/supabase/types';
@@ -59,6 +59,10 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
   const [nextItemId, setNextItemId] = useState(1);
   const { toast } = useToast();
 
+  // Product search state
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
+
   // Fetch active products (same as WorkOrderProductsTab)
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products-active'],
@@ -72,6 +76,23 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
       return data || [];
     },
   });
+
+  // Filter products based on search
+  const filteredProducts = productSearch.length >= 2
+    ? products.filter(product => 
+        product.name.toLowerCase().includes(productSearch.toLowerCase())
+      )
+    : [];
+
+  const selectedProductName = selectedProductId
+    ? products.find(p => p.id === selectedProductId)?.name
+    : '';
+
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    setProductSearch('');
+    setShowProductResults(false);
+  };
 
   const queryClient = useQueryClient();
 
@@ -203,6 +224,8 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     setSelectedProductId('');
     setSelectedPouchSize('');
     setNumberOfPouches('');
+    setProductSearch('');
+    setShowProductResults(false);
     setNextItemId(id => id + 1);
   };
 
@@ -335,31 +358,44 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
             <TabsContent value="products">
               {!isReadOnly && (
                 <div className="border rounded-lg p-4 space-y-4 mb-4">
-                  <h3 className="text-lg font-medium">Add Product Item to Order</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <h3 className="text-lg font-medium">Add Products</h3>
+                  <div className="grid grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="product">Product *</label>
-                      <Select
-                        value={selectedProductId}
-                        onValueChange={setSelectedProductId}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingProducts ? (
-                            <SelectItem value="loading" disabled>Loading...</SelectItem>
-                          ) : products.length > 0 ? (
-                            products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-products" disabled>No products available</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          id="product"
+                          placeholder={selectedProductId ? selectedProductName : "Type at least 2 characters to search products..."}
+                          value={productSearch}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value);
+                            setShowProductResults(true);
+                          }}
+                          onFocus={() => setShowProductResults(true)}
+                          className="pl-10"
+                          disabled={isReadOnly}
+                        />
+                        {showProductResults && productSearch.length >= 2 && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                            {filteredProducts.length === 0 ? (
+                              <div className="p-2 text-sm text-gray-500">No products found</div>
+                            ) : (
+                              <div className="py-1">
+                                {filteredProducts.map((product) => (
+                                  <button
+                                    key={product.id}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                                    onClick={() => handleProductSelect(product.id)}
+                                  >
+                                    {product.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="pouchSize">Pouch Size (g) *</label>
@@ -380,7 +416,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="numberOfPouches">Number of Pouches *</label>
+                      <label htmlFor="numberOfPouches">No of Pouches</label>
                       <Input
                         id="numberOfPouches"
                         type="number"

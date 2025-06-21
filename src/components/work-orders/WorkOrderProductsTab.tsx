@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, Search, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkOrderFormData } from './WorkOrderDialog';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,28 @@ interface WorkOrderProductItem {
   pouch_size: number;
 }
 
+interface Order {
+  id: string;
+  order_code: string;
+  status: string;
+  client: {
+    id: string;
+    name: string;
+  };
+}
+
+interface OrderProduct {
+  id: string;
+  product_id: string;
+  pouch_size: number;
+  number_of_pouches: number;
+  total_weight: number;
+  product: {
+    id: string;
+    name: string;
+  };
+}
+
 export function WorkOrderProductsTab({
   formData,
   setFormData,
@@ -61,6 +83,16 @@ export function WorkOrderProductsTab({
   const [numberOfPouches, setNumberOfPouches] = useState('');
   const [nextItemId, setNextItemId] = useState(1);
   const { toast } = useToast();
+
+  // Product search state
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
+
+  // Order search state
+  const [orderSearch, setOrderSearch] = useState('');
+  const [showOrderResults, setShowOrderResults] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [addedOrderIds, setAddedOrderIds] = useState<string[]>([]);
 
   // Fetch active products
   const { data: products = [], isLoading } = useQuery({
@@ -76,6 +108,138 @@ export function WorkOrderProductsTab({
       return data as Product[];
     },
   });
+
+  // Fetch orders for search
+  const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['orders-search', orderSearch],
+    queryFn: async () => {
+      let query = supabase
+        .from('orders')
+        .select(`
+          id,
+          order_code,
+          status,
+          client:clients(id, name)
+        `)
+        .in('status', ['NEW', 'IN PROGRESS'])
+        .order('order_code');
+      
+      if (orderSearch) {
+        query = query.ilike('order_code', `%${orderSearch}%`);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Order[];
+    },
+  });
+
+  // Fetch order products when an order is selected
+  const { data: orderProducts = [], isLoading: isLoadingOrderProducts } = useQuery({
+    queryKey: ['order-products', selectedOrderId],
+    queryFn: async () => {
+      if (!selectedOrderId) return [];
+      
+      const { data, error } = await supabase
+        .from('order_products')
+        .select(`
+          id,
+          product_id,
+          pouch_size,
+          number_of_pouches,
+          total_weight,
+          product:products(id, name)
+        `)
+        .eq('order_id', selectedOrderId);
+      
+      if (error) throw error;
+      return data as OrderProduct[];
+    },
+    enabled: !!selectedOrderId,
+  });
+
+  // Filter products based on search
+  const filteredProducts = productSearch.length >= 2
+    ? products.filter(product => 
+        product.name.toLowerCase().includes(productSearch.toLowerCase())
+      )
+    : [];
+
+  // Filter orders based on search
+  const filteredOrders = orderSearch.length >= 2
+    ? orders.filter(order => 
+        order.order_code.toLowerCase().includes(orderSearch.toLowerCase()) &&
+        !addedOrderIds.includes(order.id)
+      )
+    : [];
+
+  const selectedProductName = selectedProductId
+    ? products.find(p => p.id === selectedProductId)?.name
+    : '';
+
+  const selectedOrder = selectedOrderId
+    ? orders.find(o => o.id === selectedOrderId)
+    : null;
+
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    setProductSearch('');
+    setShowProductResults(false);
+  };
+
+  const handleOrderSelect = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setOrderSearch('');
+    setShowOrderResults(false);
+  };
+
+  const addProductsFromOrder = () => {
+    if (!selectedOrderId || orderProducts.length === 0) {
+      toast({
+        title: "No Products",
+        description: "Selected order has no products to add",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for duplicates
+    const existingProductIds = formData.products.map(p => p.product_id);
+    const newProducts = orderProducts.filter(op => !existingProductIds.includes(op.product_id));
+
+    if (newProducts.length === 0) {
+      toast({
+        title: "No New Products",
+        description: "All products from this order are already added to the work order",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add new products to work order
+    const newItems: WorkOrderProductItem[] = newProducts.map((op, index) => ({
+      id: `item-${nextItemId + index}`,
+      product_id: op.product_id,
+      pouch_size: op.pouch_size,
+      number_of_pouches: op.number_of_pouches,
+      total_weight: op.total_weight,
+    }));
+
+    setFormData({
+      ...formData,
+      products: [...formData.products, ...newItems],
+    });
+
+    // Mark order as added and reset
+    setAddedOrderIds(prev => [...prev, selectedOrderId]);
+    setSelectedOrderId('');
+    setNextItemId(prev => prev + newItems.length);
+
+    toast({
+      title: "Products Added",
+      description: `Added ${newItems.length} products from order ${selectedOrder?.order_code}`,
+    });
+  };
 
   const addProductItem = () => {
     if (!selectedProductId || !selectedPouchSize || !numberOfPouches) {
@@ -116,8 +280,11 @@ export function WorkOrderProductsTab({
     });
 
     // Reset form for next item
+    setSelectedProductId('');
     setSelectedPouchSize('');
     setNumberOfPouches('');
+    setProductSearch('');
+    setShowProductResults(false);
     setNextItemId(nextId => nextId + 1);
   };
 
@@ -139,86 +306,176 @@ export function WorkOrderProductsTab({
   return (
     <div className="space-y-6">
       {!isReadOnly && (
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="text-lg font-medium">Add Product Item to Work Order</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="product">Product *</Label>
-              <Select 
-                value={selectedProductId} 
-                onValueChange={setSelectedProductId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
-                  ) : products.length > 0 ? (
-                    products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-products" disabled>No products available</SelectItem>
+        <>
+          {/* Add Products from Order */}
+          <div className="border rounded-lg p-4 space-y-4">
+            <h3 className="text-lg font-medium">Add Products from Order</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="order">Search Order *</Label>
+                <div className="relative">
+                  <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    id="order"
+                    placeholder={selectedOrderId ? selectedOrder?.order_code : "Type at least 2 characters to search orders..."}
+                    value={orderSearch}
+                    onChange={(e) => {
+                      setOrderSearch(e.target.value);
+                      setShowOrderResults(true);
+                    }}
+                    onFocus={() => setShowOrderResults(true)}
+                    className="pl-10"
+                    disabled={isReadOnly}
+                  />
+                  {showOrderResults && orderSearch.length >= 2 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredOrders.length === 0 ? (
+                        <div className="p-2 text-sm text-gray-500">No orders found</div>
+                      ) : (
+                        <div className="py-1">
+                          {filteredOrders.map((order) => (
+                            <button
+                              key={order.id}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => handleOrderSelect(order.id)}
+                            >
+                              <div className="font-medium">{order.order_code}</div>
+                              <div className="text-xs text-gray-500">
+                                {order.client?.name} - {order.status}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="pouchSize">Pouch Size (g) *</Label>
-              <Select 
-                value={selectedPouchSize ? selectedPouchSize.toString() : ''} 
-                onValueChange={(value) => setSelectedPouchSize(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POUCH_SIZES.map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
-                      {size}g
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label>Order Products</Label>
+                <div className="px-3 py-2 bg-gray-50 border rounded-md text-sm min-h-[40px] flex items-center">
+                  {isLoadingOrderProducts ? (
+                    <span className="text-gray-500">Loading products...</span>
+                  ) : selectedOrderId && orderProducts.length > 0 ? (
+                    <span>{orderProducts.length} products available</span>
+                  ) : selectedOrderId ? (
+                    <span className="text-gray-500">No products in this order</span>
+                  ) : (
+                    <span className="text-gray-500">Select an order to view products</span>
+                  )}
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="numberOfPouches">Number of Pouches *</Label>
-              <Input
-                id="numberOfPouches"
-                type="number"
-                min="1"
-                value={numberOfPouches}
-                onChange={(e) => setNumberOfPouches(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Total Weight</Label>
-              <div className="px-3 py-2 bg-gray-50 border rounded-md text-sm">
-                {selectedPouchSize && numberOfPouches ? 
-                  `${(selectedPouchSize * parseInt(numberOfPouches)).toLocaleString()}g` : 
-                  '0g'
-                }
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button 
+                  onClick={addProductsFromOrder} 
+                  className="flex items-center gap-2 w-full"
+                  disabled={!selectedOrderId || isLoadingOrderProducts || orderProducts.length === 0}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add from Order
+                </Button>
               </div>
             </div>
           </div>
 
-          <Button 
-            onClick={addProductItem} 
-            className="flex items-center gap-2"
-            disabled={!selectedProductId || !selectedPouchSize || !numberOfPouches}
-          >
-            <Plus className="w-4 h-4" />
-            Add Item
-          </Button>
-        </div>
+          {/* Add Individual Product */}
+          <div className="border rounded-lg p-4 space-y-4">
+            <h3 className="text-lg font-medium">Add Individual Product</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="product">Product *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    id="product"
+                    placeholder={selectedProductId ? selectedProductName : "Type at least 2 characters to search products..."}
+                    value={productSearch}
+                    onChange={(e) => {
+                      setProductSearch(e.target.value);
+                      setShowProductResults(true);
+                    }}
+                    onFocus={() => setShowProductResults(true)}
+                    className="pl-10"
+                    disabled={isReadOnly}
+                  />
+                  {showProductResults && productSearch.length >= 2 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredProducts.length === 0 ? (
+                        <div className="p-2 text-sm text-gray-500">No products found</div>
+                      ) : (
+                        <div className="py-1">
+                          {filteredProducts.map((product) => (
+                            <button
+                              key={product.id}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => handleProductSelect(product.id)}
+                            >
+                              {product.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pouchSize">Pouch Size (g) *</Label>
+                <Select 
+                  value={selectedPouchSize ? selectedPouchSize.toString() : ''} 
+                  onValueChange={(value) => setSelectedPouchSize(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POUCH_SIZES.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}g
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="numberOfPouches">Number of Pouches *</Label>
+                <Input
+                  id="numberOfPouches"
+                  type="number"
+                  min="1"
+                  value={numberOfPouches}
+                  onChange={(e) => setNumberOfPouches(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Total Weight</Label>
+                <div className="px-3 py-2 bg-gray-50 border rounded-md text-sm">
+                  {selectedPouchSize && numberOfPouches ? 
+                    `${(selectedPouchSize * parseInt(numberOfPouches)).toLocaleString()}g` : 
+                    '0g'
+                  }
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={addProductItem} 
+              className="flex items-center gap-2"
+              disabled={!selectedProductId || !selectedPouchSize || !numberOfPouches}
+            >
+              <Plus className="w-4 h-4" />
+              Add Item
+            </Button>
+          </div>
+        </>
       )}
 
       {/* Products Table */}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Pagination,
@@ -71,12 +70,13 @@ export function WorkOrdersPagination({
           Showing {totalItems} of {totalItems} work orders
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-700">Rows per page</span>
+          <span className="text-sm text-gray-700 whitespace-nowrap">Rows per page</span>
           <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
             <SelectTrigger className="w-20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="5">5</SelectItem>
               <SelectItem value="10">10</SelectItem>
               <SelectItem value="20">20</SelectItem>
               <SelectItem value="50">50</SelectItem>
@@ -98,12 +98,13 @@ export function WorkOrdersPagination({
       
       <div className="flex items-center space-x-6">
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-700">Rows per page</span>
+          <span className="text-sm text-gray-700 whitespace-nowrap">Rows per page</span>
           <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
             <SelectTrigger className="w-20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="5">5</SelectItem>
               <SelectItem value="10">10</SelectItem>
               <SelectItem value="20">20</SelectItem>
               <SelectItem value="50">50</SelectItem>
