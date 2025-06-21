@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { OrdersTable } from './OrdersTable';
 import { OrdersDialog } from './OrdersDialog';
 import { OrdersPagination } from './OrdersPagination';
+import { Invoice } from '../invoice/Invoice';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ORDER_STATUSES } from '@/lib/constants';
@@ -17,6 +18,14 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     id: string;
     name: string;
     client_code: string;
+    office_address: string;
+    company_registration_number: string;
+    office_phone_number: string;
+    contact_person: string;
+    contact_person_phone_number: string;
+    gst_number: string;
+    is_igst: boolean;
+    discount: number;
   };
   order_products: Array<{
     id: string;
@@ -27,6 +36,8 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     products: {
       id: string;
       name: string;
+      sale_price: number | null;
+      hsn_code: string;
     };
   }>;
 };
@@ -38,6 +49,8 @@ export function OrdersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isStaff, isAdmin, user, profile } = useAuth();
@@ -68,7 +81,15 @@ export function OrdersPage() {
             clients (
               id,
               name,
-              client_code
+              client_code,
+              office_address,
+              company_registration_number,
+              office_phone_number,
+              contact_person,
+              contact_person_phone_number,
+              gst_number,
+              is_igst,
+              discount
             ),
             order_products (
               id,
@@ -78,7 +99,9 @@ export function OrdersPage() {
               total_weight,
               products (
                 id,
-                name
+                name,
+                sale_price,
+                hsn_code
               )
             )
           `)
@@ -225,6 +248,35 @@ export function OrdersPage() {
     toggleOrderStatusMutation.mutate({ orderId, status: newStatus });
   };
 
+  const handleGenerateInvoice = (order: Order) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view orders",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if order has products
+    if (!order.order_products || order.order_products.length === 0) {
+      toast({
+        title: "No Products",
+        description: "Cannot generate invoice for an order with no products",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedOrderForInvoice(order);
+    setIsInvoiceOpen(true);
+  };
+
+  const handleInvoiceClose = () => {
+    setIsInvoiceOpen(false);
+    setSelectedOrderForInvoice(null);
+  };
+
   const handleDialogSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['orders'] });
     setIsDialogOpen(false);
@@ -280,12 +332,13 @@ export function OrdersPage() {
       )}
 
       {/* Orders Table */}
-      <div className="w-[120%]">
+      <div className="w-full">
         <OrdersTable
           orders={orders}
           isLoading={isLoading}
           onEdit={handleEditOrder}
           onToggleStatus={handleToggleOrderStatus}
+          onGenerateInvoice={handleGenerateInvoice}
           isReadOnly={isStaff}
         />
       </div>
@@ -308,6 +361,15 @@ export function OrdersPage() {
         onSuccess={handleDialogSuccess}
         isReadOnly={isReadOnly}
       />
+
+      {/* Invoice Dialog */}
+      {selectedOrderForInvoice && (
+        <Invoice
+          order={selectedOrderForInvoice}
+          isOpen={isInvoiceOpen}
+          onClose={handleInvoiceClose}
+        />
+      )}
     </div>
   );
 } 

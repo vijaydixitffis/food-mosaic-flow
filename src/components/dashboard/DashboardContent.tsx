@@ -6,6 +6,7 @@ import { RecipesPage } from '@/components/recipes/RecipesPage';
 import { ClientsPage } from '@/components/clients/ClientsPage';
 import { OrdersPage } from '@/components/orders/OrdersPage';
 import { WorkOrdersPage } from '@/components/work-orders/WorkOrdersPage';
+import { InvoicesPage } from '@/components/invoice/InvoicesPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -50,7 +51,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
       case 'work-orders':
         return <WorkOrdersPage />;
       case 'invoices':
-        return <div className="p-6">Invoices Page - Coming Soon</div>;
+        return <InvoicesPage />;
       case 'reports':
         return <div className="p-6">Reports Page - Coming Soon</div>;
       default:

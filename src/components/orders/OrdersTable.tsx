@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Eye } from 'lucide-react';
+import { Edit, Eye, FileText } from 'lucide-react';
 import { ORDER_STATUSES } from '@/lib/constants';
 
 interface StatusSliderProps {
@@ -55,7 +55,7 @@ function StatusSlider({ isActive, onToggle, orderCode, disabled = false }: Statu
   );
 }
 
-export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleStatus, isReadOnly }) {
+export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleStatus, onGenerateInvoice, isReadOnly }) {
   if (isLoading) {
     return (
       <div className="rounded-md border p-4">
@@ -65,15 +65,15 @@ export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleSt
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order Code</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Order Date</TableHead>
-            <TableHead>Target Delivery</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead className="w-[120px]">Order Code</TableHead>
+            <TableHead className="w-[200px]">Client</TableHead>
+            <TableHead className="w-[120px]">Order Date</TableHead>
+            <TableHead className="w-[140px]">Target Delivery</TableHead>
+            <TableHead className="w-[300px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -92,22 +92,36 @@ export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleSt
                 <TableCell>{order.order_date}</TableCell>
                 <TableCell>{order.target_delivery_date}</TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <StatusSlider
                       isActive={isActive}
                       onToggle={() => onToggleStatus(order.id, order.status)}
                       orderCode={order.order_code}
                       disabled={isReadOnly || order.status === ORDER_STATUSES.COMPLETE}
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(order)}
-                      className="flex items-center gap-1"
-                    >
-                      {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
-                      {isReadOnly ? 'View' : 'Edit'}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(order)}
+                        className="flex items-center gap-1"
+                      >
+                        {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
+                        {isReadOnly ? 'View' : 'Edit'}
+                      </Button>
+                      {!isReadOnly && order.order_products && order.order_products.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateInvoice(order)}
+                          className="flex items-center gap-1"
+                          title="Generate Invoice"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Invoice
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
               </TableRow>
