@@ -539,3 +539,5 @@ ORDER BY issue_type, count DESC;
 
 -- Step 7: Clean up temporary table
 DROP TABLE temp_product_ingredients;
+-- update the quantity to be in grams
+update product_ingredients set quantity = quantity * 10000; 

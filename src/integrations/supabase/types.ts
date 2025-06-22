@@ -557,6 +557,51 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          id: string
+          company_name: string
+          company_logo_url: string | null
+          registration_number: string | null
+          gst_number: string | null
+          contact_number: string | null
+          qr_code_url: string | null
+          address: string | null
+          email: string | null
+          website: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_name: string
+          company_logo_url?: string | null
+          registration_number?: string | null
+          gst_number?: string | null
+          contact_number?: string | null
+          qr_code_url?: string | null
+          address?: string | null
+          email?: string | null
+          website?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_name?: string
+          company_logo_url?: string | null
+          registration_number?: string | null
+          gst_number?: string | null
+          contact_number?: string | null
+          qr_code_url?: string | null
+          address?: string | null
+          email?: string | null
+          website?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           id: string;

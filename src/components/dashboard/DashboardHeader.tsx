@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, ChevronRight, LogOut } from 'lucide-react';
+import { CompanyLogo } from '@/components/common/CompanyLogo';
 
 interface DashboardHeaderProps {
   profile: any;
@@ -21,6 +22,7 @@ export function DashboardHeader({ profile, onSignOut, onToggleSidebar, currentVi
       case 'orders': return 'Orders';
       case 'work-orders': return 'Work Orders';
       case 'invoices': return 'Invoices';
+      case 'settings': return 'Company Settings';
       case 'reports': return 'Reports';
       default: return 'Dashboard';
     }
@@ -38,6 +40,9 @@ export function DashboardHeader({ profile, onSignOut, onToggleSidebar, currentVi
           >
             <Menu className="w-5 h-5" />
           </Button>
+          <div className="hidden lg:block">
+            <CompanyLogo size="custom" showName={true} />
+          </div>
           <nav className="flex items-center space-x-2 text-sm">
             <span className="text-slate-500">Dashboard</span>
             <ChevronRight className="w-3 h-3 text-slate-400" />
@@ -45,11 +50,6 @@ export function DashboardHeader({ profile, onSignOut, onToggleSidebar, currentVi
           </nav>
         </div>
         <div className="flex items-center space-x-4">
-          <div className="hidden sm:flex items-center space-x-2 text-sm text-slate-600">
-            <span>{profile?.username || 'admin'}</span>
-            <span className="text-slate-400">•</span>
-            <span>{profile?.role === 'admin' ? 'Admin' : 'Staff'}</span>
-          </div>
           <Button
             variant="ghost"
             size="sm"

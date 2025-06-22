@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer, X } from 'lucide-react';
+import { CompanyInfo } from '@/components/common/CompanyInfo';
 import type { Database } from '@/integrations/supabase/types';
 import './invoice-print.css';
 
@@ -98,6 +99,9 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
   const invoiceNumber = generateInvoiceNumber();
   const currentDate = new Date().toLocaleDateString('en-IN');
+  
+  // Determine invoice title based on order status
+  const invoiceTitle = order.status === 'NEW' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
@@ -105,7 +109,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div className="flex-1"></div>
-            <h2 className="text-2xl font-bold text-gray-900 flex-1 text-center">TAX INVOICE</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex-1 text-center">{invoiceTitle}</h2>
             <div className="flex gap-2 no-print flex-1 justify-end">
               <Button onClick={handlePrint} variant="outline" size="sm" title="Print">
                 <Printer className="w-4 h-4" />
@@ -123,15 +127,9 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             {/* Invoice Header */}
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">FOOD MOSAIC</h1>
-                <p className="text-gray-600">Food Production & Management System</p>
-                <p className="text-gray-600">123 Food Street, Production City</p>
-                <p className="text-gray-600">Phone: +91 98765 43210</p>
-                <p className="text-gray-600">Email: info@foodmosaic.com</p>
-                <p className="text-gray-600">GST: 27ABCDE1234F1Z5</p>
+                <CompanyInfo variant="invoice" />
               </div>
               <div className="text-right">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">INVOICE</h2>
                 <div className="space-y-1 text-sm">
                   <p><span className="font-semibold">Invoice No:</span> {invoiceNumber}</p>
                   <p><span className="font-semibold">Date:</span> {currentDate}</p>

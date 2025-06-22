@@ -27,7 +27,7 @@ const Dashboard = () => {
         <SidebarProvider>
           <div className="flex h-screen overflow-hidden">
             <div className="fixed lg:static inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
-              <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
+              <AppSidebar currentView={currentView} onViewChange={handleViewChange} profile={profile} />
             </div>
             <div className="flex-1 flex flex-col overflow-hidden">
               <DashboardHeader 

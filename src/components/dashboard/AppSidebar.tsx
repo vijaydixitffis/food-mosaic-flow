@@ -22,7 +22,9 @@ import {
   Layers,
   Users,
   Utensils,
-  Factory
+  Factory,
+  Settings,
+  User
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -86,14 +88,21 @@ const adminMenuItems = [
     icon: BarChart3,
     view: "reports",
   },
+  {
+    title: "Settings",
+    url: "#",
+    icon: Settings,
+    view: "settings",
+  },
 ];
 
 interface AppSidebarProps {
   currentView: string;
   onViewChange: (view: string) => void;
+  profile?: any;
 }
 
-export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
+export function AppSidebar({ currentView, onViewChange, profile }: AppSidebarProps) {
   return (
     <Sidebar className="bg-white shadow-xl border-r border-slate-200">
       <SidebarHeader className="p-6 border-b border-slate-200 bg-gradient-to-r from-green-50 to-orange-50">
@@ -110,7 +119,17 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="px-6 py-3 bg-slate-50 border-b border-slate-200">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Admin Panel</span>
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 text-slate-500" />
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-700">
+                  {profile?.username || 'admin'}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                </span>
+              </div>
+            </div>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-4 py-6 space-y-1">
@@ -140,6 +159,7 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
                             item.title === 'Work Orders' ? 'text-green-600' :
                             item.title === 'Invoices' ? 'text-orange-500' :
                             item.title === 'Reports' ? 'text-green-500' :
+                            item.title === 'Settings' ? 'text-green-500' :
                             'text-slate-500'
                       }`} />
                       <span>{item.title}</span>
