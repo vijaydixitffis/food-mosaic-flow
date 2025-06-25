@@ -4,6 +4,7 @@ import { FileText, Download, Printer, X } from 'lucide-react';
 import { CompanyInfo } from '@/components/common/CompanyInfo';
 import type { Database } from '@/integrations/supabase/types';
 import './invoice-print.css';
+import html2pdf from 'html2pdf.js';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   clients: {
@@ -30,6 +31,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       name: string;
       sale_price: number | null;
       hsn_code: string;
+      gst: number | null;
     };
   }>;
 };
@@ -52,49 +54,102 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
     return `INV-${year}${month}${day}-${random}`;
   };
 
-  const calculateSubtotal = () => {
-    return order.order_products.reduce((total, item) => {
-      const price = item.products?.sale_price || 0;
-      const quantity = item.number_of_pouches;
-      return total + (price * quantity);
-    }, 0);
-  };
+  // GST calculation helpers
+  // Reverse calculate GST amount from GST-inclusive price
+  function calcProductGSTAmount(rate: number, gstPercent: number, qty: number) {
+    if (!gstPercent || gstPercent <= 0) return 0;
+    // GST amount = (rate * qty) * gstPercent / (100 + gstPercent)
+    return (rate * qty) * gstPercent / (100 + gstPercent);
+  }
 
-  const calculateDiscount = () => {
-    const subtotal = calculateSubtotal();
-    return (subtotal * order.clients.discount) / 100;
-  };
+  // Calculate base price (excluding GST, before discount, using product GST%)
+  function calcBasePrice(rate: number, gstPercent: number) {
+    return gstPercent > 0 ? rate / (1 + gstPercent / 100) : rate;
+  }
 
-  const calculateGST = () => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    const taxableAmount = subtotal - discount;
-    return (taxableAmount * 18) / 100; // 18% GST
-  };
+  // Calculate discount amount for a line item
+  function calcDiscountAmount(basePrice: number, clientDiscount: number, qty: number) {
+    return basePrice * qty * (clientDiscount / 100);
+  }
 
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    const gst = calculateGST();
-    return subtotal - discount + gst;
-  };
+  // Calculate discounted price per unit
+  function calcDiscountedPrice(basePrice: number, clientDiscount: number) {
+    return basePrice * (1 - clientDiscount / 100);
+  }
+
+  // Calculate taxable value (Discounted Price × Quantity)
+  function calcTaxableValue(basePrice: number, clientDiscount: number, qty: number) {
+    const discountedPrice = calcDiscountedPrice(basePrice, clientDiscount);
+    return discountedPrice * qty;
+  }
+
+  // Calculate GST amount on taxable value
+  function calcGSTOnTaxableValue(taxableValue: number, gstPercent: number) {
+    return taxableValue * (gstPercent / 100);
+  }
+
+  // Calculate total (Taxable Value + GST Amount)
+  function calcTotal(taxableValue: number, gstAmount: number) {
+    return taxableValue + gstAmount;
+  }
+
+  // For totals
+  let totalGST = 0;
+  let totalTaxableValue = 0;
+  let totalDiscountAmount = 0;
+
+  // Sum of all product GSTs
+  const totalGSTOriginal = order.order_products.reduce((sum, item) => {
+    const rate = item.products?.sale_price || 0;
+    const qty = item.number_of_pouches;
+    const gstPercent = item.products?.gst || 0;
+    return sum + calcProductGSTAmount(rate, gstPercent, qty);
+  }, 0);
+
+  // Total Amount: sum of all product item amounts (sale_price * quantity)
+  const totalAmount = order.order_products.reduce((sum, item) => {
+    const rate = item.products?.sale_price || 0;
+    const quantity = item.number_of_pouches;
+    return sum + (rate * quantity);
+  }, 0);
+
+  // Discount
+  const discountPercent = order.clients.discount || 0;
+  const discountAmount = order.order_products.reduce((sum, item) => {
+    const rate = item.products?.sale_price || 0;
+    const quantity = item.number_of_pouches;
+    return sum + (rate * quantity) * (discountPercent / 100);
+  }, 0);
+
+  // Taxable value (GST-inclusive minus discount)
+  const taxableValue = totalAmount - discountAmount;
+  // Proportionally reduce GST if discount is applied
+  const totalGSTAfterDiscount = taxableValue === totalAmount ? totalGSTOriginal : totalGSTOriginal * (taxableValue / totalAmount);
+  // Final total
+  const finalTotal = taxableValue;
+
+  // Grand Total: (Total Amount - Discount) + Total GST
+  // (Total GST is now calculated on discounted base price, fixed 12% GST)
+  // We'll sum GST per item below
+  const grandTotal = (totalAmount - discountAmount) + totalGST;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleDownload = () => {
-    // Create a blob with the invoice content
-    const invoiceContent = document.getElementById('invoice-content')?.innerHTML || '';
-    const blob = new Blob([invoiceContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Invoice-${order.order_code}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const element = document.getElementById('invoice-content');
+    if (!element) return;
+    html2pdf()
+      .set({
+        margin: 0.15,
+        filename: `Invoice-${order.order_code}.pdf`,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      })
+      .from(element)
+      .save();
   };
 
   const invoiceNumber = generateInvoiceNumber();
@@ -105,11 +160,11 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div className="flex-1"></div>
-            <h2 className="text-2xl font-bold text-gray-900 flex-1 text-center">{invoiceTitle}</h2>
+            <h2 className="text-lg font-bold text-gray-900 flex-1 text-center">{invoiceTitle}</h2>
             <div className="flex gap-2 no-print flex-1 justify-end">
               <Button onClick={handlePrint} variant="outline" size="sm" title="Print">
                 <Printer className="w-4 h-4" />
@@ -123,7 +178,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             </div>
           </div>
 
-          <div id="invoice-content" className="bg-white p-8 border rounded-lg">
+          <div id="invoice-content" className="bg-white p-8 border rounded-lg text-xs">
             {/* Invoice Header */}
             <div className="flex justify-between items-start mb-8">
               <div>
@@ -142,7 +197,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             {/* Client Details */}
             <div className="grid grid-cols-2 gap-8 mb-8">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Bill To:</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">Bill To:</h3>
                 <div className="space-y-1 text-sm">
                   <p className="font-semibold">{order.clients.name}</p>
                   <p>{order.clients.office_address}</p>
@@ -153,7 +208,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Ship To:</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">Ship To:</h3>
                 <div className="space-y-1 text-sm">
                   <p className="font-semibold">{order.clients.name}</p>
                   <p>{order.clients.office_address}</p>
@@ -165,44 +220,84 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
             {/* Order Items Table */}
             <div className="mb-8">
-              <table className="w-full border-collapse border border-gray-300">
+              <table className="w-full border-collapse border border-gray-300 text-xs">
                 <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-4 py-2 text-left">Sr. No.</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left">Product Description</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left">HSN Code</th>
-                    <th className="border border-gray-300 px-4 py-2 text-center">Pouch Size</th>
-                    <th className="border border-gray-300 px-4 py-2 text-center">Qty (Pouches)</th>
-                    <th className="border border-gray-300 px-4 py-2 text-center">Rate (₹)</th>
-                    <th className="border border-gray-300 px-4 py-2 text-center">Amount (₹)</th>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
+                    <th className="border border-gray-300 px-1 py-0.5">HSN Code</th>
+                    <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Qty</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Base Rate (₹)</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Taxable Amt. (₹)</th>
+                    <th className="border border-gray-300 px-1 py-0.5">GST</th>
+                    {order.clients.is_igst ? (
+                      <th className="border border-gray-300 px-4 py-2">IGST</th>
+                    ) : (
+                      <>
+                        <th className="border border-gray-300 px-4 py-2">CGST</th>
+                        <th className="border border-gray-300 px-4 py-2">SGST</th>
+                      </>
+                    )}
+                    <th className="border border-gray-300 px-4 py-2">Total (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {order.order_products.map((item, index) => {
                     const rate = item.products?.sale_price || 0;
                     const quantity = item.number_of_pouches;
-                    const amount = rate * quantity;
+                    const gstPercent = item.products?.gst || 0;
+                    const clientDiscount = order.clients.discount || 0;
+                    const basePrice = calcBasePrice(rate, gstPercent);
+                    const discountAmount = calcDiscountAmount(basePrice, clientDiscount, quantity);
+                    const taxableValue = calcTaxableValue(basePrice, clientDiscount, quantity);
+                    const gstAmount = calcGSTOnTaxableValue(taxableValue, gstPercent);
+                    const total = calcTotal(taxableValue, gstAmount);
+                    
+                    totalGST += gstAmount;
+                    totalTaxableValue += taxableValue;
+                    totalDiscountAmount += discountAmount;
                     
                     return (
                       <tr key={item.id}>
-                        <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {item.products?.name || 'Unknown Product'}
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">{index + 1}</td>
+                        <td className="border border-gray-300 px-1 py-0.5">
+                          {(item.products?.name || 'Unknown Product').toUpperCase()}
                         </td>
-                        <td className="border border-gray-300 px-4 py-2">
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
                           {item.products?.hsn_code || 'N/A'}
                         </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">
-                          {item.pouch_size}g
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">
-                          {quantity}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
                           ₹{rate.toFixed(2)}
                         </td>
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                          {quantity}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                          ₹{basePrice.toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                          ₹{taxableValue.toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                          {gstPercent}%
+                        </td>
+                        {order.clients.is_igst ? (
+                          <td className="border border-gray-300 px-4 py-2 text-center">
+                            ₹{gstAmount.toFixed(2)}
+                          </td>
+                        ) : (
+                          <>
+                            <td className="border border-gray-300 px-4 py-2 text-center">
+                              ₹{(gstAmount / 2).toFixed(2)}
+                            </td>
+                            <td className="border border-gray-300 px-4 py-2 text-center">
+                              ₹{(gstAmount / 2).toFixed(2)}
+                            </td>
+                          </>
+                        )}
                         <td className="border border-gray-300 px-4 py-2 text-center">
-                          ₹{amount.toFixed(2)}
+                          ₹{total.toFixed(2)}
                         </td>
                       </tr>
                     );
@@ -213,29 +308,29 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
             {/* Totals */}
             <div className="flex justify-end mb-8">
-              <div className="w-80 space-y-2">
+              <div className="w-80 space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>₹{calculateSubtotal().toFixed(2)}</span>
+                  <span>Total Taxable Value:</span>
+                  <span>₹{totalTaxableValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Discount ({order.clients.discount}%):</span>
-                  <span>-₹{calculateDiscount().toFixed(2)}</span>
+                  <span>Total Discount Amount:</span>
+                  <span>₹{totalDiscountAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>GST (18%):</span>
-                  <span>₹{calculateGST().toFixed(2)}</span>
+                  <span>Total GST:</span>
+                  <span>₹{totalGST.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total:</span>
-                  <span>₹{calculateTotal().toFixed(2)}</span>
+                <div className="flex justify-between font-bold text-base border-t pt-2">
+                  <span>Grand Total:</span>
+                  <span>₹{(totalTaxableValue + totalGST).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Terms and Conditions */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Terms & Conditions:</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Terms & Conditions:</h3>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>1. Payment is due within 30 days of invoice date.</p>
                 <p>2. Goods once sold will not be taken back.</p>

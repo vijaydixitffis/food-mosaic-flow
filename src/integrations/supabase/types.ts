@@ -209,6 +209,7 @@ export type Database = {
           sale_price: number | null
           tags: string[] | null
           updated_at: string
+          gst: number | null
         }
         Insert: {
           active?: boolean
@@ -223,6 +224,7 @@ export type Database = {
           sale_price?: number | null
           tags?: string[] | null
           updated_at?: string
+          gst?: number | null
         }
         Update: {
           active?: boolean
@@ -237,6 +239,7 @@ export type Database = {
           sale_price?: number | null
           tags?: string[] | null
           updated_at?: string
+          gst?: number | null
         }
         Relationships: []
       }

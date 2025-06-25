@@ -57,6 +57,9 @@ const productSchema = z.object({
   client_note: z.string().optional(),
   remarks: z.string().optional(),
   sale_price: z.string().optional(),
+  gst: z.string().refine(val => val === '' || (!isNaN(Number(val)) && Number(val) >= 0 && Number(val) < 100), {
+    message: 'GST must be between 0 and 99.99',
+  }),
 });
 
 interface ProductDialogProps {
@@ -100,6 +103,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
       client_note: '',
       remarks: '',
       sale_price: '',
+      gst: '',
     },
   });
 
@@ -144,6 +148,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
         client_note: product.client_note || '',
         remarks: product.remarks || '',
         sale_price: product.sale_price ? product.sale_price.toString() : '',
+        gst: product.gst !== undefined && product.gst !== null ? product.gst.toString() : '',
       });
       setTags(Array.isArray(product.tags) ? product.tags : []);
       setProductIngredients(
@@ -169,6 +174,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
         client_note: '',
         remarks: '',
         sale_price: '',
+        gst: '',
       });
       setTags([]);
       setProductIngredients([]);
@@ -195,6 +201,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
         client_note: formData.client_note || null,
         remarks: formData.remarks || null,
         sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        gst: formData.gst ? parseFloat(formData.gst) : null,
         tags: currentTags.length > 0 ? currentTags : null,
         active: true,
       };

@@ -19,6 +19,9 @@ const productSchema = z.object({
   client_note: z.string().optional(),
   remarks: z.string().optional(),
   sale_price: z.string().optional(),
+  gst: z.string().refine(val => val === '' || (!isNaN(Number(val)) && Number(val) >= 0 && Number(val) < 100), {
+    message: 'GST must be between 0 and 99.99',
+  }),
 });
 
 interface ProductBasicInfoFormProps {
@@ -65,6 +68,27 @@ export function ProductBasicInfoForm({ form }: ProductBasicInfoFormProps) {
               <FormLabel>Pack Type</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="gst"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>GST (%)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="99.99"
+                  placeholder="0.00"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

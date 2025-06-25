@@ -67,13 +67,15 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
   }
 
   if (companySettings.company_logo_url) {
+    // Use absolute URL for logo if src is relative
+    const absoluteSrc = companySettings.company_logo_url.startsWith('http') ? companySettings.company_logo_url : `${window.location.origin}/${companySettings.company_logo_url.replace(/^\//, '')}`;
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <img
-          src={companySettings.company_logo_url}
+          src={absoluteSrc}
           alt={companySettings.company_name}
           className={`object-contain ${getSizeClasses()}`}
-          style={getCustomStyle()}
+          style={{ maxWidth: '160px', height: '60px', objectFit: 'contain', display: 'block' }}
           onError={(e) => {
             // Fallback to text if image fails to load
             const target = e.target as HTMLImageElement;
