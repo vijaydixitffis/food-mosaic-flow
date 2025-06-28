@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodMosaic ERP - Complete Food Manufacturing Management Solution</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .tagline {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .company-info {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 30px;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .feature-card h3 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .benefits-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .benefits-list li {
+            background: #f8f9fa;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+            position: relative;
+        }
+
+        .benefits-list li::before {
+            content: '✓';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #28a745;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .tech-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .tech-item h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 60px 40px;
+            border-radius: 15px;
+            margin-top: 40px;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .contact-info {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .contact-info h3 {
+            margin-bottom: 15px;
+        }
+
+        .contact-info p {
+            margin-bottom: 10px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .highlight-box h3 {
+            color: #d63031;
+            margin-bottom: 15px;
+        }
+
+        .workflow-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .workflow-step {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            position: relative;
+        }
+
+        .workflow-step::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .workflow-step:last-child::after {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .workflow-diagram {
+                grid-template-columns: 1fr;
+            }
+            
+            .workflow-step::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>🍽️ FoodMosaic ERP</h1>
+            <div class="tagline">Execute Recipes and Ship Well</div>
+            <div class="company-info">
+                <h3>Built and Offered by Future Focus IT Solutions</h3>
+                <p>Complete Food Manufacturing Management Solution</p>
+            </div>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="section">
+            <h2>Revolutionize Your Food Manufacturing Business</h2>
+            <p style="text-align: center; font-size: 1.2rem; color: #666; margin-bottom: 30px;">
+                FoodMosaic ERP is a comprehensive, cloud-based enterprise resource planning solution 
+                specifically designed for food manufacturers. Streamline your entire production process 
+                from ingredient management to final delivery with our intuitive, feature-rich platform.
+            </p>
+            
+            <div class="highlight-box">
+                <h3>🎯 Why Choose FoodMosaic ERP?</h3>
+                <p>Built with modern web technologies and designed specifically for the food manufacturing industry, 
+                FoodMosaic ERP provides a seamless, integrated solution that grows with your business. 
+                From small-scale producers to large manufacturing facilities, our platform adapts to your needs.</p>
+            </div>
+        </div>
+
+        <!-- Core Features Section -->
+        <div class="section">
+            <h2>Core Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🥕</div>
+                    <h3>Ingredient Management</h3>
+                    <p>Comprehensive ingredient tracking with detailed properties, categorization, and inventory management. 
+                    Track 248+ ingredients with complete traceability and unit measurement support.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🧪</div>
+                    <h3>Compound Management</h3>
+                    <p>Create and manage ingredient compounds for efficient production workflows. 
+                    Streamline your manufacturing process with 86+ pre-configured compounds.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Product Management</h3>
+                    <p>Manage 142+ final products with comprehensive ingredient tracking, HSN codes, 
+                    GST calculations, and detailed product specifications.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📖</div>
+                    <h3>Recipe Management</h3>
+                    <p>Create and manage 64+ production recipes with step-by-step instructions, 
+                    ingredient requirements, and production guidelines.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Client Management</h3>
+                    <p>Manage 28+ clients with complete business details, GST information, 
+                    discount tracking, and contact management.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛒</div>
+                    <h3>Order Management</h3>
+                    <p>Track 45+ client orders with delivery scheduling, status tracking, 
+                    and comprehensive order history management.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🏭</div>
+                    <h3>Work Order Management</h3>
+                    <p>Create and track 15+ production work orders with detailed inventory management, 
+                    production scheduling, and quality control tracking.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Invoice & Billing</h3>
+                    <p>Generate 32+ professional invoices with automatic GST calculations, 
+                    client-specific pricing, and comprehensive billing management.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Benefits Section -->
+        <div class="section">
+            <h2>Key Benefits</h2>
+            <ul class="benefits-list">
+                <li><strong>Complete Production Visibility:</strong> Track every step of your manufacturing process from raw ingredients to finished products</li>
+                <li><strong>Automated GST Calculations:</strong> Built-in GST/IGST calculations with support for different tax structures</li>
+                <li><strong>Real-time Inventory Management:</strong> Monitor ingredient levels, compound availability, and product stock in real-time</li>
+                <li><strong>Client-Specific Pricing:</strong> Manage different pricing structures and discount levels for each client</li>
+                <li><strong>Professional Invoicing:</strong> Generate tax-compliant invoices with automatic calculations and professional formatting</li>
+                <li><strong>Recipe Standardization:</strong> Ensure consistent product quality with standardized recipes and production procedures</li>
+                <li><strong>Order Tracking:</strong> Complete visibility into order status from creation to delivery</li>
+                <li><strong>Work Order Management:</strong> Streamline production planning and execution with detailed work orders</li>
+                <li><strong>Multi-user Access:</strong> Role-based access control with admin and staff permissions</li>
+                <li><strong>Cloud-based Solution:</strong> Access your data from anywhere with secure cloud storage</li>
+                <li><strong>Mobile Responsive:</strong> Optimized interface that works seamlessly on all devices</li>
+                <li><strong>Scalable Architecture:</strong> Grows with your business needs and requirements</li>
+            </ul>
+        </div>
+
+        <!-- Workflow Section -->
+        <div class="section">
+            <h2>Production Workflow</h2>
+            <div class="workflow-diagram">
+                <div class="workflow-step">
+                    <h4>1. Ingredient Management</h4>
+                    <p>Add and manage raw ingredients with detailed specifications and inventory tracking</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>2. Compound Creation</h4>
+                    <p>Create ingredient compounds for efficient production workflows</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>3. Product Development</h4>
+                    <p>Define final products with ingredient compositions and specifications</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>4. Recipe Creation</h4>
+                    <p>Develop production recipes with step-by-step instructions</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>5. Order Processing</h4>
+                    <p>Receive and process client orders with delivery scheduling</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>6. Work Order Generation</h4>
+                    <p>Create production work orders with detailed specifications</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>7. Production Execution</h4>
+                    <p>Execute production with real-time tracking and quality control</p>
+                </div>
+                <div class="workflow-step">
+                    <h4>8. Delivery & Billing</h4>
+                    <p>Complete delivery and generate professional invoices</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Specifications -->
+        <div class="section">
+            <h2>Technical Excellence</h2>
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <h4>Modern Web Architecture</h4>
+                    <p>Single Page Application (SPA)</p>
+                    <p>Component-based UI Design</p>
+                    <p>Responsive & Mobile-First</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Cloud Infrastructure</h4>
+                    <p>Scalable Cloud Database</p>
+                    <p>Real-time Data Synchronization</p>
+                    <p>High Availability & Reliability</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Security & Authentication</h4>
+                    <p>Enterprise-grade Security</p>
+                    <p>Role-based Access Control</p>
+                    <p>Multi-user Collaboration</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Advanced Features</h4>
+                    <p>PDF Generation & Export</p>
+                    <p>Print & Document Support</p>
+                    <p>Data Backup & Recovery</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="cta-section">
+            <h2>Ready to Transform Your Food Manufacturing Business?</h2>
+            <p>Join the growing number of food manufacturers who trust FoodMosaic ERP to streamline their operations, 
+            improve efficiency, and drive growth.</p>
+            
+            <div class="contact-info">
+                <h3>Contact Future Focus IT Solutions</h3>
+                <p><strong>Email:</strong> info@futurefocusit.solutions</p>
+                <p><strong>Phone:</strong> +91-8275421793</p>
+                <p><strong>Website:</strong> www.futurefocusit.solutions</p>
+                <p><strong>Location:</strong> Pune, India</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding: 40px 0; color: #666;">
+            <p>&copy; 2024 Future Focus IT Solutions. All rights reserved.</p>
+            <p>FoodMosaic ERP - Execute Recipes and Ship Well</p>
+        </div>
+    </div>
+</body>
+</html> 
