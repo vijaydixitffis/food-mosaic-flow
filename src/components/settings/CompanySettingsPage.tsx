@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Save, Upload, Image as ImageIcon } from 'lucide-react';
+import { Settings, Save, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
 import { CompanySettingsForm } from './CompanySettingsForm';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,14 +28,51 @@ export function CompanySettingsPage() {
         .single();
 
       console.log('Company settings query result:', { data, error });
-      console.log('Full company settings data:', JSON.stringify(data, null, 2));
-
+      
+      // If no rows found, return null instead of throwing error
+      if (error && (error as any).code === 'PGRST116') {
+        console.log('No company settings found, returning null for setup');
+        return null;
+      }
+      
       if (error) {
         console.error('Error fetching company settings:', error);
         throw error;
       }
 
       return data;
+    },
+  });
+
+  // Create company settings mutation (for initial setup)
+  const createMutation = useMutation({
+    mutationFn: async (settings: Partial<CompanySettings>) => {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .insert(settings)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings'] });
+      toast({
+        title: 'Success',
+        description: 'Company settings created successfully.',
+      });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create company settings.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -73,7 +110,13 @@ export function CompanySettingsPage() {
   });
 
   const handleSave = (settings: Partial<CompanySettings>) => {
-    updateMutation.mutate(settings);
+    if (companySettings) {
+      // Update existing settings
+      updateMutation.mutate(settings);
+    } else {
+      // Create new settings
+      createMutation.mutate(settings);
+    }
   };
 
   if (isLoading) {
@@ -92,7 +135,48 @@ export function CompanySettingsPage() {
     );
   }
 
-  if (error) {
+  // Handle case where no company settings exist (initial setup)
+  if (!companySettings && !error) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Company Setup</h1>
+            <p className="text-gray-600 mt-1">
+              Welcome! Let's set up your company information to get started.
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Initial Company Setup
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">Setup Required</h3>
+              <p className="text-blue-700 text-sm">
+                Please provide your company information to complete the setup. This information will be used throughout the application for invoices, branding, and contact details.
+              </p>
+            </div>
+            
+            <CompanySettingsForm
+              settings={null}
+              isEditing={true}
+              onSave={handleSave}
+              isLoading={createMutation.isPending}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle actual errors
+  if (error && (error as any).code !== 'PGRST116') {
     return (
       <div className="p-6">
         <Card>
@@ -112,6 +196,7 @@ export function CompanySettingsPage() {
     );
   }
 
+  // Normal company settings view/edit
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">

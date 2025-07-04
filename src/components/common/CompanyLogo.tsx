@@ -18,6 +18,12 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
         .select('company_name, company_logo_url')
         .single();
 
+      // If no rows found, return null instead of throwing error
+      if (error && (error as any).code === 'PGRST116') {
+        console.log('CompanyLogo: No company settings found, returning null');
+        return null;
+      }
+      
       if (error) {
         throw error;
       }
@@ -57,11 +63,18 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
 
   if (!companySettings) {
     return (
-      <div 
-        className={`flex items-center justify-center bg-gray-100 rounded ${getSizeClasses()} ${className}`}
-        style={getCustomStyle()}
-      >
-        <ImageIcon className="w-1/2 h-1/2 text-gray-400" />
+      <div className={`flex items-center space-x-2 ${className}`}>
+        <div 
+          className={`flex items-center justify-center bg-gray-100 rounded ${getSizeClasses()}`}
+          style={getCustomStyle()}
+        >
+          <ImageIcon className="w-1/2 h-1/2 text-gray-400" />
+        </div>
+        {showName && (
+          <span className={`font-semibold text-gray-900 ${getTextSize()}`}>
+            FoodMosaic ERP
+          </span>
+        )}
       </div>
     );
   }

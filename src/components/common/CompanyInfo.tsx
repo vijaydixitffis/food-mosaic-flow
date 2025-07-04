@@ -22,6 +22,12 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
 
       console.log('CompanyInfo: Supabase query result:', { data, error });
 
+      // If no rows found, return null instead of throwing error
+      if (error && (error as any).code === 'PGRST116') {
+        console.log('CompanyInfo: No company settings found, returning null');
+        return null;
+      }
+      
       if (error) {
         console.error('CompanyInfo: Error fetching company settings:', error);
         throw error;
@@ -47,13 +53,13 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
 
   // Fallback company settings if database query fails
   const fallbackSettings = {
-    company_name: 'FoodMosaic ERP (Fallback)',
-    address: '123 Food Street, Manufacturing District, City - 123456',
-    registration_number: 'REG123456789',
-    gst_number: '27ABCDE1234F1Z5',
-    contact_number: '+91-9876543210',
-    email: 'info@foodmosaic.com',
-    website: 'https://foodmosaic.com',
+    company_name: 'FoodMosaic ERP',
+    address: '',
+    registration_number: '',
+    gst_number: '',
+    contact_number: '',
+    email: '',
+    website: '',
   };
 
   // Use fallback if no data or error
