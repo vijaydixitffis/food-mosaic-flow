@@ -91,22 +91,12 @@ export function ProductsPage() {
           `)
           .order('name', { ascending: true });
 
-        if (searchTerm) {
-          query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-        }
-
         console.log('ProductsPage - About to execute count query');
         
-        // Get total count for pagination - Fixed the count query
-        let countQuery = supabase
+        // Get total count for pagination
+        const { count, error: countError } = await supabase
           .from('products')
           .select('*', { count: 'exact', head: true });
-
-        if (searchTerm) {
-          countQuery = countQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-        }
-
-        const { count, error: countError } = await countQuery;
 
         if (countError) {
           console.error('ProductsPage - Count query error:', {
@@ -120,11 +110,10 @@ export function ProductsPage() {
         }
 
         console.log('ProductsPage - Count query successful, count:', count);
-        console.log('ProductsPage - About to execute data query with pagination');
+        console.log('ProductsPage - About to execute data query');
 
-        // Get paginated results
-        const { data, error } = await query
-          .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+        // Get all results (we'll filter client-side for consistent partial matching)
+        const { data, error } = await query;
 
         if (error) {
           console.error('ProductsPage - Data query error:', {
@@ -143,9 +132,30 @@ export function ProductsPage() {
           sampleData: data?.[0]
         });
 
+        // Filter results client-side for consistent partial matching across all fields
+        let filteredData = data as ProductWithIngredients[];
+        let filteredCount = count || 0;
+
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          filteredData = filteredData.filter(product => 
+            product.name.toLowerCase().includes(searchLower) ||
+            (product.description && product.description.toLowerCase().includes(searchLower)) ||
+            (product.tags && product.tags.some(tag => 
+              tag.toLowerCase().includes(searchLower)
+            ))
+          );
+          filteredCount = filteredData.length;
+        }
+
+        // Apply pagination to filtered results
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
         return {
-          products: data as ProductWithIngredients[],
-          total: count || 0
+          products: paginatedData,
+          total: filteredCount
         };
       } catch (err) {
         console.error('ProductsPage - Query function error:', err);
@@ -301,7 +311,7 @@ export function ProductsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search products by name or description..."
+          placeholder="Search products by name, description, or tags..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
