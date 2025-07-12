@@ -36,6 +36,7 @@ interface IngredientFormData {
   unit_of_measurement: string;
   rate: string;
   tags: string;
+  initial_stock: string; // Add initial stock field
 }
 
 const UNIT_OPTIONS = [
@@ -55,6 +56,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
     unit_of_measurement: '',
     rate: '',
     tags: '',
+    initial_stock: '', // Initialize initial_stock
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -72,6 +74,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
         unit_of_measurement: ingredient.unit_of_measurement || '',
         rate: ingredient.rate ? ingredient.rate.toString() : '',
         tags: ingredient.tags ? ingredient.tags.join(', ') : '',
+        initial_stock: '', // Initialize as empty for existing ingredients
       });
     } else {
       setFormData({
@@ -80,6 +83,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
         unit_of_measurement: '',
         rate: '',
         tags: '',
+        initial_stock: '', // Reset initial_stock for new ingredient
       });
     }
   }, [ingredient, isOpen]);
@@ -92,6 +96,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
         unit_of_measurement: data.unit_of_measurement || null,
         rate: data.rate ? parseFloat(data.rate) : null,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : null,
+        current_stock: data.initial_stock ? parseFloat(data.initial_stock) : 0, // Set initial stock
         active: true,
       };
 
@@ -206,59 +211,68 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
             {isReadOnly ? 'View Ingredient' : (ingredient ? 'Edit Ingredient' : 'Add New Ingredient')}
           </DialogTitle>
         </DialogHeader>
-        {/* Show current stock and Add Stock button if editing */}
-        {ingredient && (
-          <div className="mb-4 space-y-2">
-            <div className="flex items-center gap-4">
-              <div className="font-medium">
-                Current Stock: 
-                <span className="text-blue-700">
-                  {isLoadingIngredient ? 'Loading...' : currentStock}
-                </span>
-              </div>
-              {!isReadOnly && (
-                <Button size="sm" variant="outline" onClick={() => setShowAddStock(v => !v)}>
-                  {showAddStock ? 'Cancel' : 'Add Stock'}
-                </Button>
-              )}
+        {/* Show current stock and Add Stock button for both new and existing ingredients */}
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center gap-4">
+            <div className="font-medium">
+              Current Stock: 
+              <span className="text-blue-700">
+                {ingredient ? (isLoadingIngredient ? 'Loading...' : currentStock) : '0'}
+              </span>
+            </div>
+            {!isReadOnly && ingredient && (
+              <Button size="sm" variant="outline" onClick={() => setShowAddStock(v => !v)}>
+                {showAddStock ? 'Cancel' : 'Add Stock'}
+              </Button>
+            )}
+            {ingredient && (
               <Button size="sm" variant="outline" onClick={() => setShowStockHistory(v => !v)}>
                 {showStockHistory ? 'Hide History' : 'Show History'}
               </Button>
-            </div>
-            
-            {/* Stock History */}
-            {showStockHistory && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                <h4 className="font-medium mb-2">Stock Transaction History</h4>
-                {isLoadingHistory ? (
-                  <div className="text-sm text-gray-500">Loading history...</div>
-                ) : stockHistory?.data && stockHistory.data.length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {stockHistory.data.map((transaction) => (
-                      <div key={transaction.stock_entry_id} className="flex justify-between items-center text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            transaction.stock_entry_type === 'INWARD' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {transaction.stock_entry_type}
-                          </span>
-                          <span>{transaction.quantity_allocated}</span>
-                        </div>
-                        <div className="text-gray-500 text-xs">
-                          {new Date(transaction.allocation_date).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500">No transaction history</div>
-                )}
-              </div>
             )}
           </div>
-        )}
+          
+          {/* Stock History - only show for existing ingredients */}
+          {ingredient && showStockHistory && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-md">
+              <h4 className="font-medium mb-2">Stock Transaction History</h4>
+              {isLoadingHistory ? (
+                <div className="text-sm text-gray-500">Loading history...</div>
+              ) : stockHistory?.data && stockHistory.data.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {stockHistory.data.map((transaction) => (
+                    <div key={transaction.stock_entry_id} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          transaction.stock_entry_type === 'INWARD' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {transaction.stock_entry_type}
+                        </span>
+                        <span>{transaction.quantity_allocated}</span>
+                      </div>
+                      <div className="text-gray-500 text-xs">
+                        {new Date(transaction.allocation_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">No transaction history</div>
+              )}
+            </div>
+          )}
+          
+          {/* Info message for new ingredients */}
+          {!ingredient && (
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-700">
+                Set initial stock below. Stock management features will be available after saving.
+              </p>
+            </div>
+          )}
+        </div>
         {/* Inline Add Stock form */}
         {showAddStock && (
           <form onSubmit={handleAddStock} className="mb-4 flex gap-2 items-end">
@@ -352,6 +366,23 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
               readOnly={isReadOnly}
             />
           </div>
+
+          {/* Initial Stock field for new ingredients */}
+          {!ingredient && (
+            <div className="space-y-2">
+              <Label htmlFor="initial_stock">Initial Stock</Label>
+              <Input
+                id="initial_stock"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.initial_stock}
+                onChange={(e) => handleInputChange('initial_stock', e.target.value)}
+                placeholder="Enter initial stock quantity"
+                required
+              />
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
