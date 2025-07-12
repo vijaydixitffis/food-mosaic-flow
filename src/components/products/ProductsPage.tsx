@@ -9,7 +9,6 @@ import { ProductDialog } from './ProductDialog';
 import { ProductsPagination } from './ProductsPagination';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { AddProductStockDialog } from './AddProductStockDialog'; // Import the AddProductStockDialog
 import type { Database } from '@/integrations/supabase/types';
 
 
@@ -42,7 +41,6 @@ export function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAddStockDialogOpen, setIsAddStockDialogOpen] = useState(false); // State for Add Stock dialog
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -295,10 +293,6 @@ export function ProductsPage() {
             <Button onClick={handleAddProduct} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Add Product
-            </Button>
-            <Button onClick={() => setIsAddStockDialogOpen(true)} variant="secondary" className="flex items-center gap-2"> {/* Add Add Stock button */}
-              <Plus className="w-4 h-4" />
-              Add Stock
             </Button>
           </div>
         )}
