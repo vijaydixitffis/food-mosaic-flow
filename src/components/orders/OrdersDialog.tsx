@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { ORDER_STATUSES, ORDER_STATUS_DISPLAY_NAMES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
 
+import { getProductStock, getStockAllocationsByOrder, allocateProductStock } from '@/integrations/supabase/stock';
+import { OrderStockAllocationTab } from './OrderStockAllocationTab';
 // Predefined pouch sizes in grams (copied from WorkOrderProductsTab)
 const POUCH_SIZES = [50, 100, 125, 150, 250, 500, 1000];
 
@@ -200,6 +202,64 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     },
   });
 
+  // --- Fetch Product Stock and Allocations for Stock Allocation Tab ---
+  const { data: productStock = [], isLoading: isLoadingProductStock } = useQuery({
+    queryKey: ['productStock'],
+    queryFn: getProductStock,
+  });
+
+  const { data: orderStockAllocations = [], isLoading: isLoadingOrderStockAllocations } = useQuery({
+    queryKey: ['stock-allocations', order?.id],
+    queryFn: () => getStockAllocationsByOrder(order!.id),
+    enabled: !!order?.id, // Only fetch if order exists
+  });
+
+  // Combine order products with stock and allocation data
+  const productsWithStockAndAllocation = React.useMemo(() => {
+    if (!formData.products || !productStock || !orderStockAllocations) return [];
+
+    return formData.products.map(orderProduct => {
+      const stockItem = productStock.find(stock => stock.product_id === orderProduct.product_id);
+      const allocatedQuantity = orderStockAllocations
+        .filter(allocation => allocation.stock_item_id === stockItem?.id)
+        .reduce((sum, allocation) => sum + allocation.quantity_allocated, 0);
+
+      return {
+        ...orderProduct,
+        currentStock: stockItem?.quantity || 0,
+        stockItemId: stockItem?.id || null, // Pass stock item ID for allocation
+        allocatedQuantity: allocatedQuantity,
+      };
+    });
+  }, [formData.products, productStock, orderStockAllocations]);
+
+  // --- Handle Product Stock Allocation ---
+  const allocateMutation = useMutation({
+    mutationFn: async ({ productId, quantity, stockItemId }: { productId: string; quantity: number; stockItemId: string }) => {
+      if (!order?.id) {
+        throw new Error('Cannot allocate stock without an order ID.');
+      }
+      if (!stockItemId) {
+         throw new Error('Cannot allocate stock without a valid stock item ID.');
+      }
+       await allocateProductStock({ productId, orderId: order.id, quantity, stockItemId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productStock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-allocations', order?.id] });
+      toast({
+        title: 'Success',
+        description: 'Product stock allocated successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to allocate product stock: ${error.message}`,
+        variant: 'destructive',
+      });
+    }});
+
   const addProductItem = () => {
     if (!selectedProductId || !selectedPouchSize || !numberOfPouches) {
       toast({
@@ -281,6 +341,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
             <TabsList className="mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="stock-allocation">Stock Allocation</TabsTrigger>
             </TabsList>
             <TabsContent value="details">
               {/* Client search and select UI */}
@@ -503,6 +564,13 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+            <TabsContent value="stock-allocation">
+             <OrderStockAllocationTab
+               productsWithStockAndAllocation={productsWithStockAndAllocation}
+               onAllocateStock={allocateMutation.mutate}
+               isReadOnly={isReadOnly}
+             />
             </TabsContent>
           </Tabs>
           {validationError && (

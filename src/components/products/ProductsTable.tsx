@@ -23,7 +23,8 @@ type ProductWithIngredients = Product & {
       name: string;
       unit_of_measurement: string | null;
     };
-  }>;
+  }>; // Add stock property to ProductWithIngredients type
+  stock: number | null;
 };
 
 interface StatusSliderProps {
@@ -138,6 +139,7 @@ export function ProductsTable({
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Sale Price</TableHead>
+            <TableHead>Stock</TableHead> {/* Add Stock column header */}
             <TableHead>Tags</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -153,6 +155,9 @@ export function ProductsTable({
               </TableCell>
               <TableCell>
                 {product.sale_price ? `₹${Number(product.sale_price).toFixed(2)}` : '-'}
+              </TableCell>
+              <TableCell>
+                {product.stock !== null ? product.stock : '-'} {/* Display product stock */}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">

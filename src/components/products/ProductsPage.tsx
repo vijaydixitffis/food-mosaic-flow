@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,11 @@ import { ProductDialog } from './ProductDialog';
 import { ProductsPagination } from './ProductsPagination';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { AddProductStockDialog } from './AddProductStockDialog'; // Import the AddProductStockDialog
 import type { Database } from '@/integrations/supabase/types';
+import { getProductStock } from '@/integrations/supabase/stock'; // Import getProductStock
 
-type Product = Database['public']['Tables']['products']['Row'];
+type Product = Database['public']['Tables']['products']['Row'] & { stock: number | null }; // Add stock property
 type ProductWithIngredients = Product & {
   product_ingredients: Array<{
     id: string;
@@ -40,6 +42,7 @@ export function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddStockDialogOpen, setIsAddStockDialogOpen] = useState(false); // State for Add Stock dialog
   const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -66,33 +69,13 @@ export function ProductsPage() {
       try {
         let query = supabase
           .from('products')
-          .select(`
-            *,
-            product_ingredients (
-              id,
-              ingredient_id,
-              quantity,
-              ingredients (
-                id,
-                name,
-                unit_of_measurement
-              )
-            ),
-            product_compounds (
-              id,
-              compound_id,
-              quantity,
-              compounds (
-                id,
-                name,
-                unit_of_measurement
-              )
-            )
-          `)
+          .select(
+            '*, product_ingredients ( id, ingredient_id, quantity, ingredients ( id, name, unit_of_measurement ) ), product_compounds ( id, compound_id, quantity, compounds ( id, name, unit_of_measurement ) )'
+          ) // Replaced template literal with string
           .order('name', { ascending: true });
 
         console.log('ProductsPage - About to execute count query');
-        
+
         // Get total count for pagination
         const { count, error: countError } = await supabase
           .from('products')
@@ -112,7 +95,7 @@ export function ProductsPage() {
         console.log('ProductsPage - Count query successful, count:', count);
         console.log('ProductsPage - About to execute data query');
 
-        // Get all results (we'll filter client-side for consistent partial matching)
+        // Get all results (we\'ll filter client-side for consistent partial matching)
         const { data, error } = await query;
 
         if (error) {
@@ -138,10 +121,10 @@ export function ProductsPage() {
 
         if (searchTerm) {
           const searchLower = searchTerm.toLowerCase();
-          filteredData = filteredData.filter(product => 
+          filteredData = filteredData.filter(product =>
             product.name.toLowerCase().includes(searchLower) ||
             (product.description && product.description.toLowerCase().includes(searchLower)) ||
-            (product.tags && product.tags.some(tag => 
+            (product.tags && product.tags.some(tag =>
               tag.toLowerCase().includes(searchLower)
             ))
           );
@@ -164,6 +147,12 @@ export function ProductsPage() {
     },
   });
 
+  // Fetch product stock
+  const { data: productStock, isLoading: isLoadingStock } = useQuery({
+    queryKey: ['productStock'],
+    queryFn: getProductStock,
+  });
+
   console.log('ProductsPage - Query state:', {
     isLoading,
     error: error ? {
@@ -173,6 +162,18 @@ export function ProductsPage() {
     } : null,
     hasData: !!productsData
   });
+
+  // Combine products with stock data
+  const products = useMemo(() => {
+    if (!productsData?.products) return [];
+    return productsData.products.map(product => {
+      const stockItem = productStock?.data?.find(item => item.product_id === product.id);
+      return { ...product, stock: stockItem?.quantity || 0 };
+    });
+  }, [productsData?.products, productStock?.data]); // Add productStock to dependencies
+
+  const totalItems = productsData?.total || 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -279,10 +280,6 @@ export function ProductsPage() {
     setCurrentPage(1);
   };
 
-  const products = productsData?.products || [];
-  const totalItems = productsData?.total || 0;
-  const totalPages = Math.ceil(totalItems / pageSize);
-
   return (
     <div className="px-6 py-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -300,12 +297,19 @@ export function ProductsPage() {
           </div>
         </div>
         {!isStaff && (
-          <Button onClick={handleAddProduct} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Product
-          </Button>
+          <div className="flex gap-4"> {/* Use a flex container for buttons */}
+            <Button onClick={handleAddProduct} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Product
+            </Button>
+            <Button onClick={() => setIsAddStockDialogOpen(true)} variant="secondary" className="flex items-center gap-2"> {/* Add Add Stock button */}
+              <Plus className="w-4 h-4" />
+              Add Stock
+            </Button>
+          </div>
         )}
       </div>
+
 
       {/* Search */}
       <div className="relative">
@@ -335,7 +339,7 @@ export function ProductsPage() {
       {/* Products Table */}
       <ProductsTable
         products={products}
-        isLoading={isLoading}
+        isLoading={isLoading || isLoadingStock} // Update isLoading prop
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onToggleActive={handleToggleActive}
