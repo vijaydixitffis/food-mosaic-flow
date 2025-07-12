@@ -18,6 +18,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,6 @@ const formSchema = z.object({
     (val) => Number(val),
     z.number().positive('Quantity must be a positive number.')
   ),
-  location: z.string().optional(),
 });
 
 interface AddProductStockDialogProps {
@@ -80,7 +80,6 @@ export function AddProductStockDialog({
     defaultValues: {
       product_id: '',
       quantity: 0,
-      location: '',
     },
   });
 
@@ -91,7 +90,7 @@ export function AddProductStockDialog({
         title: 'Success',
         description: 'Product stock added successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['productStock'] }); // Invalidate productStock query
+      queryClient.invalidateQueries({ queryKey: ['products'] }); // Invalidate products query
       onClose(); // Close the dialog on success
       form.reset(); // Reset form fields
     },
@@ -106,7 +105,12 @@ export function AddProductStockDialog({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addStockMutation.mutate(values);
+    if (values.product_id && values.quantity) {
+      addStockMutation.mutate({
+        product_id: values.product_id,
+        quantity: values.quantity
+      });
+    }
   }
 
   return (
@@ -164,22 +168,7 @@ export function AddProductStockDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location (Optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Enter the storage location of the stock.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
             <Button type="submit" disabled={addStockMutation.isPending}>
               {addStockMutation.isPending ? 'Adding Stock...' : 'Add Stock'}
             </Button>

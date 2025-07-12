@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AddProductStockDialog } from './AddProductStockDialog'; // Import the AddProductStockDialog
 import type { Database } from '@/integrations/supabase/types';
-import { getProductStock } from '@/integrations/supabase/stock'; // Import getProductStock
+
 
 type Product = Database['public']['Tables']['products']['Row'] & { stock: number | null }; // Add stock property
 type ProductWithIngredients = Product & {
@@ -147,12 +147,6 @@ export function ProductsPage() {
     },
   });
 
-  // Fetch product stock
-  const { data: productStock, isLoading: isLoadingStock } = useQuery({
-    queryKey: ['productStock'],
-    queryFn: getProductStock,
-  });
-
   console.log('ProductsPage - Query state:', {
     isLoading,
     error: error ? {
@@ -163,14 +157,14 @@ export function ProductsPage() {
     hasData: !!productsData
   });
 
-  // Combine products with stock data
+  // Use products with their current_stock
   const products = useMemo(() => {
     if (!productsData?.products) return [];
-    return productsData.products.map(product => {
-      const stockItem = productStock?.data?.find(item => item.product_id === product.id);
-      return { ...product, stock: stockItem?.quantity || 0 };
-    });
-  }, [productsData?.products, productStock?.data]); // Add productStock to dependencies
+    return productsData.products.map(product => ({
+      ...product, 
+      stock: product.current_stock || 0
+    }));
+  }, [productsData?.products]);
 
   const totalItems = productsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -339,7 +333,7 @@ export function ProductsPage() {
       {/* Products Table */}
       <ProductsTable
         products={products}
-        isLoading={isLoading || isLoadingStock} // Update isLoading prop
+        isLoading={isLoading}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onToggleActive={handleToggleActive}

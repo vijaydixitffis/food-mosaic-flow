@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ORDER_STATUSES, ORDER_STATUS_DISPLAY_NAMES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
 
-import { getProductStock, getStockAllocationsByOrder, allocateProductStock } from '@/integrations/supabase/stock';
+import { getStockAllocationsByOrder, allocateProductStock } from '@/integrations/supabase/stock';
 import { OrderStockAllocationTab } from './OrderStockAllocationTab';
 // Predefined pouch sizes in grams (copied from WorkOrderProductsTab)
 const POUCH_SIZES = [50, 100, 125, 150, 250, 500, 1000];
@@ -202,50 +202,48 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     },
   });
 
-  // --- Fetch Product Stock and Allocations for Stock Allocation Tab ---
-  const { data: productStock = [], isLoading: isLoadingProductStock } = useQuery({
-    queryKey: ['productStock'],
-    queryFn: getProductStock,
-  });
-
-  const { data: orderStockAllocations = [], isLoading: isLoadingOrderStockAllocations } = useQuery({
+  // --- Fetch Stock Allocations for Stock Allocation Tab ---
+  const { data: orderStockAllocationsResponse, isLoading: isLoadingOrderStockAllocations } = useQuery({
     queryKey: ['stock-allocations', order?.id],
     queryFn: () => getStockAllocationsByOrder(order!.id),
     enabled: !!order?.id, // Only fetch if order exists
   });
 
+  // Extract data from responses
+  const orderStockAllocations = orderStockAllocationsResponse?.data || [];
+
+  // Wrapper function for allocateMutation to match expected signature
+  const handleAllocateStock = (productId: string, allocatedQuantity: number) => {
+    allocateMutation.mutate({ productId, quantity: allocatedQuantity });
+  };
+
   // Combine order products with stock and allocation data
   const productsWithStockAndAllocation = React.useMemo(() => {
-    if (!formData.products || !productStock || !orderStockAllocations) return [];
+    if (!formData.products || !orderStockAllocations) return [];
 
     return formData.products.map(orderProduct => {
-      const stockItem = productStock.find(stock => stock.product_id === orderProduct.product_id);
       const allocatedQuantity = orderStockAllocations
-        .filter(allocation => allocation.stock_item_id === stockItem?.id)
+        .filter(allocation => allocation.stock_item_id === orderProduct.product_id)
         .reduce((sum, allocation) => sum + allocation.quantity_allocated, 0);
 
       return {
         ...orderProduct,
-        currentStock: stockItem?.quantity || 0,
-        stockItemId: stockItem?.id || null, // Pass stock item ID for allocation
+        currentStock: 0, // This will be populated from the products table
         allocatedQuantity: allocatedQuantity,
       };
     });
-  }, [formData.products, productStock, orderStockAllocations]);
+  }, [formData.products, orderStockAllocations]);
 
   // --- Handle Product Stock Allocation ---
   const allocateMutation = useMutation({
-    mutationFn: async ({ productId, quantity, stockItemId }: { productId: string; quantity: number; stockItemId: string }) => {
+    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number }) => {
       if (!order?.id) {
         throw new Error('Cannot allocate stock without an order ID.');
       }
-      if (!stockItemId) {
-         throw new Error('Cannot allocate stock without a valid stock item ID.');
-      }
-       await allocateProductStock({ productId, orderId: order.id, quantity, stockItemId });
+      await allocateProductStock({ productId, orderId: order.id, quantity });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['productStock'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-allocations', order?.id] });
       toast({
         title: 'Success',
@@ -335,6 +333,9 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{order ? `Edit Order - ${order.order_code}` : 'Add New Order'}</DialogTitle>
+          <DialogDescription>
+            {order ? 'Edit the order details and products.' : 'Create a new order with client and product information.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={tab} onValueChange={setTab} className="w-full">
@@ -568,7 +569,8 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
             <TabsContent value="stock-allocation">
              <OrderStockAllocationTab
                productsWithStockAndAllocation={productsWithStockAndAllocation}
-               onAllocateStock={allocateMutation.mutate}
+               onAllocateStock={handleAllocateStock}
+               orderId={order?.id || ''}
                isReadOnly={isReadOnly}
              />
             </TabsContent>

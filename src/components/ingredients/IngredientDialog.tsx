@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Ingredient } from './IngredientsPage';
+import { addIngredientStock, getIngredientStockHistory } from '@/integrations/supabase/stock';
 
 interface IngredientDialogProps {
   isOpen: boolean;
@@ -58,6 +59,10 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showAddStock, setShowAddStock] = useState(false);
+  const [showStockHistory, setShowStockHistory] = useState(false);
+  const [addStockQty, setAddStockQty] = useState('');
+  const [addStockLoading, setAddStockLoading] = useState(false);
 
   useEffect(() => {
     if (ingredient) {
@@ -144,6 +149,55 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
     }));
   };
 
+  // Fetch current ingredient data to get the most up-to-date stock
+  const { data: currentIngredient, isLoading: isLoadingIngredient } = useQuery({
+    queryKey: ['ingredient', ingredient?.id],
+    queryFn: async () => {
+      if (!ingredient?.id) return null;
+      const { data, error } = await supabase
+        .from('ingredients')
+        .select('*')
+        .eq('id', ingredient.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ingredient?.id,
+  });
+
+  // Use the fetched ingredient data for current stock, fallback to prop
+  const currentStock = currentIngredient?.current_stock ?? ingredient?.current_stock ?? 0;
+
+  // Fetch stock history for this ingredient
+  const { data: stockHistory, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['ingredient-stock-history', ingredient?.id],
+    queryFn: () => getIngredientStockHistory(ingredient!.id),
+    enabled: !!ingredient?.id && showStockHistory,
+  });
+
+  // Add stock handler
+  const handleAddStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ingredient?.id || !addStockQty) return;
+    setAddStockLoading(true);
+    try {
+      await addIngredientStock({
+        ingredient_id: ingredient.id,
+        quantity: parseFloat(addStockQty),
+      });
+      toast({ title: 'Success', description: 'Stock added successfully.' });
+      setAddStockQty('');
+      setShowAddStock(false);
+      // Invalidate both the ingredients list and the specific ingredient query
+      queryClient.invalidateQueries({ queryKey: ['ingredients'] });
+      queryClient.invalidateQueries({ queryKey: ['ingredient', ingredient.id] });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to add stock', variant: 'destructive' });
+    } finally {
+      setAddStockLoading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -152,6 +206,77 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
             {isReadOnly ? 'View Ingredient' : (ingredient ? 'Edit Ingredient' : 'Add New Ingredient')}
           </DialogTitle>
         </DialogHeader>
+        {/* Show current stock and Add Stock button if editing */}
+        {ingredient && (
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center gap-4">
+              <div className="font-medium">
+                Current Stock: 
+                <span className="text-blue-700">
+                  {isLoadingIngredient ? 'Loading...' : currentStock}
+                </span>
+              </div>
+              {!isReadOnly && (
+                <Button size="sm" variant="outline" onClick={() => setShowAddStock(v => !v)}>
+                  {showAddStock ? 'Cancel' : 'Add Stock'}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setShowStockHistory(v => !v)}>
+                {showStockHistory ? 'Hide History' : 'Show History'}
+              </Button>
+            </div>
+            
+            {/* Stock History */}
+            {showStockHistory && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                <h4 className="font-medium mb-2">Stock Transaction History</h4>
+                {isLoadingHistory ? (
+                  <div className="text-sm text-gray-500">Loading history...</div>
+                ) : stockHistory?.data && stockHistory.data.length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {stockHistory.data.map((transaction) => (
+                      <div key={transaction.stock_entry_id} className="flex justify-between items-center text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            transaction.stock_entry_type === 'INWARD' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {transaction.stock_entry_type}
+                          </span>
+                          <span>{transaction.quantity_allocated}</span>
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {new Date(transaction.allocation_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">No transaction history</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {/* Inline Add Stock form */}
+        {showAddStock && (
+          <form onSubmit={handleAddStock} className="mb-4 flex gap-2 items-end">
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={addStockQty}
+              onChange={e => setAddStockQty(e.target.value)}
+              placeholder="Enter quantity"
+              required
+              className="w-32"
+            />
+            <Button type="submit" size="sm" disabled={addStockLoading}>
+              {addStockLoading ? 'Adding...' : 'Add'}
+            </Button>
+          </form>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

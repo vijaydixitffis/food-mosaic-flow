@@ -85,6 +85,7 @@ export type Database = {
         Row: {
           active: boolean | null
           created_at: string
+          current_stock: number | null
           id: string
           name: string
           rate: number | null
@@ -96,6 +97,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           created_at?: string
+          current_stock?: number | null
           id?: string
           name: string
           rate?: number | null
@@ -107,6 +109,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           created_at?: string
+          current_stock?: number | null
           id?: string
           name?: string
           rate?: number | null
@@ -200,6 +203,7 @@ export type Database = {
           active: boolean
           client_note: string | null
           created_at: string
+          current_stock: number | null
           description: string | null
           hsn_code: string
           id: string
@@ -215,6 +219,7 @@ export type Database = {
           active?: boolean
           client_note?: string | null
           created_at?: string
+          current_stock?: number | null
           description?: string | null
           hsn_code: string
           id?: string
@@ -230,6 +235,7 @@ export type Database = {
           active?: boolean
           client_note?: string | null
           created_at?: string
+          current_stock?: number | null
           description?: string | null
           hsn_code?: string
           id?: string
@@ -693,6 +699,38 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+
+
+      stock_allocation: {
+        Row: {
+          stock_entry_id: string;
+          stock_entry_type: string;
+          stock_type: string;
+          stock_item_id: string;
+          reference_id: string | null;
+          quantity_allocated: number;
+          allocation_date: string;
+        };
+        Insert: {
+          stock_entry_id?: string;
+          stock_entry_type: string;
+          stock_type: string;
+          stock_item_id: string;
+          reference_id?: string | null;
+          quantity_allocated: number;
+          allocation_date?: string;
+        };
+        Update: {
+          stock_entry_id?: string;
+          stock_entry_type?: string;
+          stock_type?: string;
+          stock_item_id?: string;
+          reference_id?: string | null;
+          quantity_allocated?: number;
+          allocation_date?: string;
+        };
+        Relationships: [];
       };
     }
     Views: {

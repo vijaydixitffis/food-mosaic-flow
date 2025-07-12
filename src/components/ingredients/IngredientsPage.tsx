@@ -9,8 +9,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { IngredientsTable } from './IngredientsTable';
 import { IngredientDialog } from './IngredientDialog';
 import { IngredientsSearch } from './IngredientsSearch';
-import { AddIngredientStockDialog } from './AddIngredientStockDialog';
-import { getIngredientStock, IngredientStock } from '@/integrations/supabase/stock'; // Import getIngredientStock
+
+
 import { IngredientsPagination } from './IngredientsPagination';
 
 export interface Ingredient {
@@ -23,7 +23,7 @@ export interface Ingredient {
   active: boolean | null;
   created_at: string;
   updated_at: string;
-  stock: number | null; // Add stock property
+  current_stock: number | null; // Current stock property
 }
 
 export function IngredientsPage() {
@@ -31,7 +31,7 @@ export function IngredientsPage() {
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isAddStockDialogOpen, setIsAddStockDialogOpen] = useState(false); // State for add stock dialog
+
   const [pageSize, setPageSize] = useState(5);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -60,17 +60,10 @@ export function IngredientsPage() {
     },
   });
 
-  // Fetch ingredient stock
-  const { data: ingredientStock, isLoading: isLoadingStock, error: errorStock } = useQuery({
-    queryKey: ['ingredientStock'],
-    queryFn: getIngredientStock, // Corrected queryFn
-  });
-
   // Combine ingredients with stock data and filter based on search term
   const combinedAndFilteredIngredients = useMemo(() => {
     const combined = ingredients.map(ingredient => {
-      const stockItem = ingredientStock?.data?.find(item => item.ingredient_id === ingredient.id);
-      return { ...ingredient, stock: stockItem?.quantity || 0 };
+      return { ...ingredient, stock: ingredient.current_stock || 0 };
     });
 
     const searchLower = searchTerm.toLowerCase();
@@ -89,7 +82,7 @@ export function IngredientsPage() {
 
       return nameMatch || descriptionMatch || tagsMatch;
     });
-  }, [ingredients, searchTerm, ingredientStock?.data]); // Add ingredientStock?.data to dependencies
+  }, [ingredients, searchTerm]); // Remove ingredientStock dependency
 
   // Paginate combined and filtered ingredients
   const paginatedIngredients = useMemo(() => {
@@ -113,7 +106,7 @@ export function IngredientsPage() {
   console.log('Current page:', currentPage);
   console.log('Page size:', pageSize);
   console.log('Total pages:', totalPages);
-  console.log('Is loading stock:', isLoadingStock);
+  // Stock is now part of ingredients data
   console.log('Is loading:', isLoading);
   console.log('Error:', error);
 
@@ -176,24 +169,14 @@ export function IngredientsPage() {
     }
   };
 
-  const handleAddStock = () => {
-    if (isStaff) {
-      toast({
-        title: "Access Restricted",
-        description: "You can only add stock as an Admin.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsAddStockDialogOpen(true);
-  };
+  // Remove handleAddStock function as it's no longer needed
 
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingIngredient(null);
   };
 
-  const handleAddStockDialogClose = () => setIsAddStockDialogOpen(false);
+
 
   const handleSearchChange = (value: string) => {
     console.log('Search term changed to:', value);
@@ -227,19 +210,13 @@ export function IngredientsPage() {
               </p>
             </div>
           </div>
-          {/* Buttons for Add Ingredient and Add Stock */}
+          {/* Button for Add Ingredient */}
           <div className="flex gap-4">
             {!isStaff && (
-                <Button onClick={handleAddIngredient} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Ingredient
-                </Button>
-              )}
-            {!isStaff && ( // Only show Add Stock button for non-staff (Admins)
-                <Button onClick={handleAddStock} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Stock
-              </Button> // Corrected closing tag
+              <Button onClick={handleAddIngredient} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Ingredient
+              </Button>
             )}
           </div>
         </div>
@@ -256,7 +233,7 @@ export function IngredientsPage() {
         {/* Ingredients Table */}
         <IngredientsTable
           ingredients={paginatedIngredients}
-          isLoading={isLoading || isLoadingStock} // Include isLoadingStock
+          isLoading={isLoading}
           onEdit={handleEditIngredient}
           onDeactivate={handleDeactivateIngredient}
           isReadOnly={isStaff}
@@ -279,3 +256,70 @@ export function IngredientsPage() {
           ingredient={editingIngredient}
           isReadOnly={isStaff}
         />
+
+        {/* Stock management is now handled within the IngredientDialog */}
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-6 py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Carrot className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {isStaff ? 'View ingredient information' : 'Create and manage ingredient information'}
+            </p>
+          </div>
+        </div>
+        {/* Button for Add Ingredient */}
+        <div className="flex gap-4">
+          {!isStaff && (
+            <Button onClick={handleAddIngredient} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Ingredient
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Search */}
+      <IngredientsSearch searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+
+      {/* Ingredients Table */}
+      <IngredientsTable
+        ingredients={paginatedIngredients}
+        isLoading={isLoading}
+        onEdit={handleEditIngredient}
+        onDeactivate={handleDeactivateIngredient}
+        isReadOnly={isStaff}
+      />
+
+      {/* Pagination */}
+      <IngredientsPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={combinedAndFilteredIngredients.length}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+
+      {/* Ingredient Dialog */}
+      <IngredientDialog
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        ingredient={editingIngredient}
+        isReadOnly={isStaff}
+      />
+
+              {/* Stock management is now handled within the IngredientDialog */}
+    </div>
+  );
+}

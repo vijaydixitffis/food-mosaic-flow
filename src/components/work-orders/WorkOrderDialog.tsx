@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getRequiredIngredientsForWorkOrder } from '@/integrations/supabase/stock';
 import {
   Dialog,
   DialogContent,
@@ -87,12 +88,12 @@ export function WorkOrderDialog({
     queryKey: ['work-order-required-ingredients', workOrder?.id],
     queryFn: async (): Promise<RequiredIngredient[]> => {
       if (!workOrder?.id) return [];
-      // Assuming you have a Supabase function 'get_required_ingredients_for_work_order'
-      const { data, error } = await supabase.rpc('get_required_ingredients_for_work_order', { p_work_order_id: workOrder.id });
+      // Use the existing function from stock.ts
+      const { data, error } = await getRequiredIngredientsForWorkOrder(workOrder.id);
       if (error) throw error;
-      // The RPC should return data directly conforming to RequiredIngredient[] or be mapped here
-      // Assuming the RPC returns data in the correct format already
-      return data || [];
+      // For now, return empty array since the function returns work order products
+      // TODO: Implement proper ingredient calculation
+      return [];
     },
     enabled: !!workOrder?.id && activeTab === 'ingredients', // Only enable query if workOrder exists and ingredients tab is active
   });
