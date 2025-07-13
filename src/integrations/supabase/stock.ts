@@ -285,24 +285,168 @@ export async function allocateIngredientStock(data: { ingredientId: string; work
  * @returns A list of required ingredients with quantities or an error.
  */
 export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
-  // Simplified approach: fetch work order products first, then fetch ingredients for each product
-  const { data: workOrderProducts, error: workOrderError } = await supabase
-    .from('work_order_products')
-    .select('product_id, total_weight')
-    .eq('work_order_id', workOrderId);
+  try {
+    // 1. Get work order products with their quantities
+    const { data: workOrderProducts, error: workOrderError } = await supabase
+      .from('work_order_products')
+      .select(`
+        product_id, 
+        total_weight,
+        number_of_pouches,
+        pouch_size
+      `)
+      .eq('work_order_id', workOrderId);
 
-  if (workOrderError) {
-    console.error('Error fetching work order products:', workOrderError);
-    return { data: null, error: workOrderError };
+    if (workOrderError) {
+      console.error('Error fetching work order products:', workOrderError);
+      return { data: null, error: workOrderError };
+    }
+
+    if (!workOrderProducts || workOrderProducts.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // 2. Get all product IDs
+    const productIds = workOrderProducts.map(wop => wop.product_id);
+
+    // 3. Get direct product ingredients
+    const { data: productIngredients, error: piError } = await supabase
+      .from('product_ingredients')
+      .select(`
+        ingredient_id,
+        quantity,
+        product_id,
+        ingredients:ingredient_id (
+          id,
+          name,
+          unit_of_measurement,
+          current_stock
+        )
+      `)
+      .in('product_id', productIds);
+
+    if (piError) {
+      console.error('Error fetching product ingredients:', piError);
+      return { data: null, error: piError };
+    }
+
+    // 4. Get compound ingredients
+    const { data: productCompounds, error: pcError } = await supabase
+      .from('product_compounds')
+      .select(`
+        compound_id,
+        quantity,
+        product_id,
+        compounds:compound_id (
+          id,
+          name,
+          compound_ingredients (
+            ingredient_id,
+            quantity,
+            ingredients:ingredient_id (
+              id,
+              name,
+              unit_of_measurement,
+              current_stock
+            )
+          )
+        )
+      `)
+      .in('product_id', productIds);
+
+    if (pcError) {
+      console.error('Error fetching product compounds:', pcError);
+      return { data: null, error: pcError };
+    }
+
+    // 5. Calculate ingredient requirements
+    const ingredientMap = new Map<string, {
+      ingredient_id: string;
+      name: string;
+      unit_of_measurement: string;
+      required_quantity: number;
+      current_stock: number;
+    }>();
+
+    // Helper function to convert units to kg
+    const convertToKg = (value: number, unit: string): number => {
+      return unit?.toLowerCase() === 'g' || unit?.toLowerCase() === 'gms' 
+        ? value / 1000 
+        : value;
+    };
+
+    // Process direct product ingredients
+    productIngredients?.forEach(pi => {
+      if (!pi.ingredients) return;
+      
+      const workOrderProduct = workOrderProducts.find(wop => wop.product_id === pi.product_id);
+      if (!workOrderProduct) return;
+
+      const ingredientId = pi.ingredient_id;
+      const unit = pi.ingredients.unit_of_measurement || 'kg';
+      
+      // Calculate total ingredient weight: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
+      const totalProductWeight = (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
+      const totalIngredientWeight = (pi.quantity || 0) * totalProductWeight;
+      const quantityInKg = convertToKg(totalIngredientWeight, unit);
+      
+      if (!ingredientMap.has(ingredientId)) {
+        ingredientMap.set(ingredientId, {
+          ingredient_id: ingredientId,
+          name: pi.ingredients.name,
+          unit_of_measurement: 'kg',
+          required_quantity: 0,
+          current_stock: pi.ingredients.current_stock || 0
+        });
+      }
+      
+      const ingredient = ingredientMap.get(ingredientId)!;
+      ingredient.required_quantity += quantityInKg;
+    });
+
+    // Process compound ingredients
+    productCompounds?.forEach(pc => {
+      if (!pc.compounds || !Array.isArray(pc.compounds.compound_ingredients)) return;
+      
+      const workOrderProduct = workOrderProducts.find(wop => wop.product_id === pc.product_id);
+      if (!workOrderProduct) return;
+
+      pc.compounds.compound_ingredients.forEach(ci => {
+        if (!ci.ingredients) return;
+        
+        const ingredientId = ci.ingredient_id;
+        const unit = ci.ingredients.unit_of_measurement || 'kg';
+        
+        // Calculate total ingredient weight
+        const totalProductWeight = (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
+        const totalIngredientWeight = (ci.quantity || 0) * totalProductWeight;
+        const quantityInKg = convertToKg(totalIngredientWeight, unit);
+        
+        if (!ingredientMap.has(ingredientId)) {
+          ingredientMap.set(ingredientId, {
+            ingredient_id: ingredientId,
+            name: ci.ingredients.name,
+            unit_of_measurement: 'kg',
+            required_quantity: 0,
+            current_stock: ci.ingredients.current_stock || 0
+          });
+        }
+        
+        const ingredient = ingredientMap.get(ingredientId)!;
+        ingredient.required_quantity += quantityInKg;
+      });
+    });
+
+    // Convert map to array and sort by ingredient name
+    const ingredients = Array.from(ingredientMap.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+
+    return { data: ingredients, error: null };
+  } catch (error) {
+    console.error('Error in getRequiredIngredientsForWorkOrder:', error);
+    return { data: null, error };
   }
-
-  if (!workOrderProducts || workOrderProducts.length === 0) {
-    return { data: [], error: null };
-  }
-
-  // For now, return the work order products data
-  // The ingredient calculation can be done on the client side or with a more complex query
-  return { data: workOrderProducts, error: null };
 }
 
 /**

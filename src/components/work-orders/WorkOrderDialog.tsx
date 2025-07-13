@@ -3,16 +3,16 @@ import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getRequiredIngredientsForWorkOrder } from '@/integrations/supabase/stock';
+import { getRequiredIngredientsForWorkOrder, allocateIngredientStock } from '@/integrations/supabase/stock';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger, TabsProps } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkOrderBasicInfoTab } from './WorkOrderBasicInfoTab';
-import { WorkOrderProductsTab, WorkOrderProductItem } from './WorkOrderProductsTab';
+import { WorkOrderProductsTab } from './WorkOrderProductsTab';
 import { DeliveryDialog } from './DeliveryDialog';
 import { WorkOrderIngredientsTab } from './WorkOrderIngredientsTab';
 import type { Database } from '@/integrations/supabase/types';
@@ -45,14 +45,30 @@ type RequiredIngredient = {
   required_quantity: number;
 };
 
-type RequiredIngredientWithStock = RequiredIngredient & {
-  current_stock: number;
+type RequiredIngredientWithStock = {
+  id: string;
+  name: string;
+  unit_of_measurement: string | null;
+  required_quantity: number;
+  stock: number;
+};
+
+export interface WorkOrderFormData {
+  name: string;
+  description: string;
+  remarks: string;
+  status: WorkOrderStatus;
+  products: Array<{
+    product_id: string;
+    number_of_pouches: number;
+    pouch_size: number;
+    total_weight: number;
+  }>;
 }
 
 export interface StockAllocationItem {
   id: string;
 }
-type IngredientStock = Database['public']['Tables']['ingredient_stock']['Row'];
 
 interface WorkOrderDialogProps {
   isOpen: boolean;
@@ -70,7 +86,7 @@ export function WorkOrderDialog({
   onSuccess,
   isReadOnly,
 }: WorkOrderDialogProps) {
-  const [activeTab, setActiveTab] = useState<TabsProps['defaultValue']>('basic');
+  const [activeTab, setActiveTab] = useState<string>('basic');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [formData, setFormData] = useState<WorkOrderFormData>({
@@ -88,63 +104,64 @@ export function WorkOrderDialog({
     queryKey: ['work-order-required-ingredients', workOrder?.id],
     queryFn: async (): Promise<RequiredIngredient[]> => {
       if (!workOrder?.id) return [];
-      // Use the existing function from stock.ts
       const { data, error } = await getRequiredIngredientsForWorkOrder(workOrder.id);
       if (error) throw error;
-      // For now, return empty array since the function returns work order products
-      // TODO: Implement proper ingredient calculation
-      return [];
+      return data || [];
     },
     enabled: !!workOrder?.id && activeTab === 'ingredients', // Only enable query if workOrder exists and ingredients tab is active
   });
   
-  // Fetch all ingredient stock
-  const { data: ingredientStockData, isLoading: isLoadingIngredientStock } = useQuery<IngredientStock[]>({
-    queryKey: ['ingredientStock'],
+  // Fetch all ingredients with current stock
+  const { data: ingredientsData, isLoading: isLoadingIngredients } = useQuery({
+    queryKey: ['ingredients'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ingredient_stock').select('*');
+      const { data, error } = await supabase
+        .from('ingredients')
+        .select('id, name, current_stock, unit_of_measurement')
+        .order('name');
       if (error) throw error;
       return data;
     },
-    enabled: activeTab === 'ingredients', // Only fetch stock when ingredients tab is active
+    enabled: activeTab === 'ingredients', // Only fetch when ingredients tab is active
   });
 
   // Combine required ingredients with current stock data
   const combinedIngredients = useMemo<RequiredIngredientWithStock[]>(() => {
-    if (!requiredIngredientsData || !ingredientStockData) return [];
+    if (!requiredIngredientsData || !ingredientsData) return [];
+    
     return requiredIngredientsData.map(requiredIng => {
-      const stockItem = ingredientStockData.find(stock => stock.ingredient_id === requiredIng.ingredient_id);
+      const ingredient = ingredientsData.find(ing => ing.id === requiredIng.ingredient_id);
       return {
-        ...requiredIng,
-        current_stock: stockItem?.quantity || 0,
+        id: requiredIng.ingredient_id,
+        name: requiredIng.name,
+        unit_of_measurement: requiredIng.unit_of_measurement,
+        required_quantity: requiredIng.required_quantity,
+        stock: ingredient?.current_stock || 0,
       };
     });
-  }, [requiredIngredientsData, ingredientStockData]);
+  }, [requiredIngredientsData, ingredientsData]);
   
   // Mutation for allocating ingredient stock
   const allocateIngredientStockMutation = useMutation({
     mutationFn: async ({ ingredientId, quantity }: { ingredientId: string; quantity: number }) => {
       if (!workOrder?.id) throw new Error('Work order ID is missing');
-      // Find the stock_item_id for the ingredient
-      const stockItem = ingredientStockData?.find(item => item.ingredient_id === ingredientId);
-      if (!stockItem) throw new Error(`Stock item not found for ingredient ID: ${ingredientId}`);
-
-      const { data, error } = await supabase.rpc('allocate_ingredient_stock', {
-        p_ingredient_stock_id: stockItem.id,
-        p_work_order_id: workOrder.id,
-        p_quantity: quantity,
+      
+      const { data, error } = await allocateIngredientStock({
+        ingredientId,
+        workOrderId: workOrder.id,
+        quantity
       });
 
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ingredientStock'] }); // Invalidate overall stock
+      queryClient.invalidateQueries({ queryKey: ['ingredients'] }); // Invalidate ingredients to refresh stock
       queryClient.invalidateQueries({ queryKey: ['work-order-required-ingredients', workOrder?.id] }); // Invalidate required ingredients for WO
-      // Optionally invalidate a specific query for allocations if you add one
+      queryClient.invalidateQueries({ queryKey: ['stock-allocations', workOrder?.id] }); // Invalidate stock allocations
       toast({
         title: "Success",
-        description: "Ingredient stock allocated.",
+        description: "Ingredient stock allocated successfully.",
       });
     },
     onError: (error: Error) => {
@@ -247,9 +264,9 @@ export function WorkOrderDialog({
     },
   });
 
-  const handleAllocateIngredientStock = (ingredientId: string, allocatedQuantity: number) => {
+  const handleAllocateIngredientStock = (ingredientId: string, quantity: number) => {
     if (!workOrder?.id) return; // Should not happen if button is disabled
-    allocateIngredientStockMutation.mutate({ ingredientId, quantity: allocatedQuantity });
+    allocateIngredientStockMutation.mutate({ ingredientId, quantity });
   };
   const handleSubmit = async () => {
     if (formData.products.length === 0) {
@@ -289,7 +306,7 @@ export function WorkOrderDialog({
     }
   }, [workOrder]);
 
-  const handleTabChange = (tab: TabsProps['defaultValue']) => {
+  const handleTabChange = (tab: string) => {
     if (tab === 'products' && formData.name.trim() === '') {
       return;
     } else if (tab === 'ingredients' && !workOrder) return; // Cannot go to ingredients if no work order
@@ -342,6 +359,7 @@ export function WorkOrderDialog({
 
           <TabsContent value="ingredients" className="space-y-4">
             <WorkOrderIngredientsTab
+              workOrderId={workOrder?.id || null}
               requiredIngredientsWithStock={combinedIngredients}
               onAllocateStock={handleAllocateIngredientStock}
               isReadOnly={isReadOnly}
