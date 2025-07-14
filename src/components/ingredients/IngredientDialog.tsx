@@ -96,22 +96,21 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
         unit_of_measurement: data.unit_of_measurement || null,
         rate: data.rate ? parseFloat(data.rate) : null,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : null,
-        current_stock: data.initial_stock ? parseFloat(data.initial_stock) : 0, // Set initial stock
         active: true,
       };
 
       if (ingredient) {
+        // Update: do NOT touch current_stock
         const { error } = await supabase
           .from('ingredients')
           .update(ingredientData)
           .eq('id', ingredient.id);
-        
         if (error) throw error;
       } else {
+        // Create: set current_stock from initial_stock
         const { error } = await supabase
           .from('ingredients')
-          .insert([ingredientData]);
-        
+          .insert([{ ...ingredientData, current_stock: data.initial_stock ? parseFloat(data.initial_stock) : 0 }]);
         if (error) throw error;
       }
     },
@@ -193,9 +192,10 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
       toast({ title: 'Success', description: 'Stock added successfully.' });
       setAddStockQty('');
       setShowAddStock(false);
-      // Invalidate both the ingredients list and the specific ingredient query
+      // Invalidate both the ingredients list, the specific ingredient query, and the stock history query
       queryClient.invalidateQueries({ queryKey: ['ingredients'] });
       queryClient.invalidateQueries({ queryKey: ['ingredient', ingredient.id] });
+      queryClient.invalidateQueries({ queryKey: ['ingredient-stock-history', ingredient.id] });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to add stock', variant: 'destructive' });
     } finally {
@@ -205,7 +205,7 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isReadOnly ? 'View Ingredient' : (ingredient ? 'Edit Ingredient' : 'Add New Ingredient')}
@@ -293,97 +293,95 @@ export function IngredientDialog({ isOpen, onClose, ingredient, isReadOnly = fal
         )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              required={!isReadOnly}
-              placeholder="Enter ingredient name"
-              readOnly={isReadOnly}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.short_description}
-              onChange={(e) => handleInputChange('short_description', e.target.value)}
-              placeholder="Enter ingredient description"
-              rows={3}
-              readOnly={isReadOnly}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="unit">Unit of Measurement</Label>
-            {isReadOnly ? (
-              <Input
-                value={formData.unit_of_measurement || 'Not specified'}
-                readOnly
-              />
-            ) : (
-              <Select
-                value={formData.unit_of_measurement}
-                onValueChange={(value) => handleInputChange('unit_of_measurement', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select unit of measurement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {UNIT_OPTIONS.map((unit) => (
-                    <SelectItem key={unit.value} value={unit.value}>
-                      {unit.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="rate">Rate (per unit)</Label>
-            <Input
-              id="rate"
-              type="number"
-              step="0.01"
-              value={formData.rate}
-              onChange={(e) => handleInputChange('rate', e.target.value)}
-              placeholder="0.00"
-              readOnly={isReadOnly}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
-            <Input
-              id="tags"
-              value={formData.tags}
-              onChange={(e) => handleInputChange('tags', e.target.value)}
-              placeholder="Enter tags separated by commas"
-              readOnly={isReadOnly}
-            />
-          </div>
-
-          {/* Initial Stock field for new ingredients */}
-          {!ingredient && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="initial_stock">Initial Stock</Label>
+              <Label htmlFor="name">Name *</Label>
               <Input
-                id="initial_stock"
-                type="number"
-                min="0"
-                step="1"
-                value={formData.initial_stock}
-                onChange={(e) => handleInputChange('initial_stock', e.target.value)}
-                placeholder="Enter initial stock quantity"
-                required
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required={!isReadOnly}
+                placeholder="Enter ingredient name"
+                readOnly={isReadOnly}
               />
             </div>
-          )}
-
+            <div className="space-y-2">
+              <Label htmlFor="rate">Rate (per unit)</Label>
+              <Input
+                id="rate"
+                type="number"
+                step="0.01"
+                value={formData.rate}
+                onChange={(e) => handleInputChange('rate', e.target.value)}
+                placeholder="0.00"
+                readOnly={isReadOnly}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit">Unit of Measurement</Label>
+              {isReadOnly ? (
+                <Input
+                  value={formData.unit_of_measurement || 'Not specified'}
+                  readOnly
+                />
+              ) : (
+                <Select
+                  value={formData.unit_of_measurement}
+                  onValueChange={(value) => handleInputChange('unit_of_measurement', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit of measurement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map((unit) => (
+                      <SelectItem key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tags">Tags</Label>
+              <Input
+                id="tags"
+                value={formData.tags}
+                onChange={(e) => handleInputChange('tags', e.target.value)}
+                placeholder="Enter tags separated by commas"
+                readOnly={isReadOnly}
+              />
+            </div>
+            {/* Initial Stock field for new ingredients */}
+            {!ingredient && (
+              <div className="space-y-2">
+                <Label htmlFor="initial_stock">Initial Stock</Label>
+                <Input
+                  id="initial_stock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.initial_stock}
+                  onChange={(e) => handleInputChange('initial_stock', e.target.value)}
+                  placeholder="Enter initial stock quantity"
+                  required
+                />
+              </div>
+            )}
+            {/* Empty div to keep grid alignment if initial stock is present */}
+            {!ingredient && <div />}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.short_description}
+                onChange={(e) => handleInputChange('short_description', e.target.value)}
+                placeholder="Enter ingredient description"
+                rows={3}
+                readOnly={isReadOnly}
+              />
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               {isReadOnly ? 'Close' : 'Cancel'}
