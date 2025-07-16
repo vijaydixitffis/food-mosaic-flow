@@ -40,6 +40,42 @@ CREATE TRIGGER update_profiles_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+-- RLS Policies for profiles (read-only for all authenticated users)
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
+DROP POLICY IF EXISTS "No one can delete profiles" ON public.profiles;
+
+CREATE POLICY "Authenticated users can read profiles"
+ON public.profiles
+FOR SELECT
+TO authenticated
+USING (true);
+
+-- No insert, update, or delete allowed for anyone
+DROP POLICY IF EXISTS "Allow insert on profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow update on profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow delete on profiles" ON public.profiles;
+
+-- Optionally, explicitly deny insert, update, delete
+CREATE POLICY "No one can insert profiles"
+ON public.profiles
+FOR INSERT
+TO authenticated
+WITH CHECK (false);
+
+CREATE POLICY "No one can update profiles"
+ON public.profiles
+FOR UPDATE
+TO authenticated
+USING (false);
+
+CREATE POLICY "No one can delete profiles"
+ON public.profiles
+FOR DELETE
+TO authenticated
+USING (false);
+
 -- 4. FUNCTIONS (must be before any policy or table that uses them)
 CREATE OR REPLACE FUNCTION public.get_user_role(user_id uuid)
 RETURNS user_role
@@ -63,26 +99,12 @@ AS $$
 $$;
 
 -- 5. RLS Policies for profiles
-CREATE POLICY "Admins can view all profiles"
-ON public.profiles
-FOR SELECT
-TO authenticated
-USING (public.is_admin(auth.uid()) OR id = auth.uid());
-CREATE POLICY "Admins can insert profiles"
-ON public.profiles
-FOR INSERT
-TO authenticated
-WITH CHECK (public.is_admin(auth.uid()));
-CREATE POLICY "Admins can update profiles"
-ON public.profiles
-FOR UPDATE
-TO authenticated
-USING (public.is_admin(auth.uid()));
-CREATE POLICY "No one can delete profiles"
-ON public.profiles
-FOR DELETE
-TO authenticated
-USING (false);
+-- These policies are now redundant as RLS is handled by the new policies above.
+-- Keeping them for now, but they will be removed if the new policies are sufficient.
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
+DROP POLICY IF EXISTS "No one can delete profiles" ON public.profiles;
 
 -- 6. INGREDIENTS TABLE
 CREATE TABLE public.ingredients (
