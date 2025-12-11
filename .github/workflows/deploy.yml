@@ -22,6 +22,18 @@ jobs:
         with:
           node-version: 20
 
+      - name: Set Supabase env (DEMO)
+        if: ${{ vars.IS_DEMO == 'true' }}
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.DEMO_VITE_SUPABASE_URL }}" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_KEY=${{ secrets.DEMO_VITE_SUPABASE_KEY }}" >> $GITHUB_ENV
+
+      - name: Set Supabase env (PROD)
+        if: ${{ vars.IS_DEMO != 'true' }}
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_KEY=${{ secrets.VITE_SUPABASE_KEY }}" >> $GITHUB_ENV
+
       - name: Clean dependencies
         run: |
           rm -rf node_modules
@@ -32,9 +44,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
