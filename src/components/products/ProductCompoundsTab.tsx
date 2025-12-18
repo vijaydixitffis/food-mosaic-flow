@@ -47,7 +47,9 @@ export function ProductCompoundsTab({
             <SelectValue placeholder="Select compound" />
           </SelectTrigger>
           <SelectContent>
-            {compounds.map((compound) => (
+            {[...compounds]
+              .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+              .map((compound) => (
               <SelectItem key={compound.id} value={compound.id}>
                 {compound.name}
               </SelectItem>
@@ -70,7 +72,9 @@ export function ProductCompoundsTab({
       {/* Selected Compounds */}
       {productCompounds.length > 0 && (
         <div className="space-y-2">
-          {productCompounds.map((pc) => (
+          {[...productCompounds]
+            .sort((a, b) => (a.compound_name || '').localeCompare(b.compound_name || ''))
+            .map((pc) => (
             <div key={pc.compound_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
               <span className="text-sm">
                 {pc.compound_name} - Quantity: {pc.quantity}

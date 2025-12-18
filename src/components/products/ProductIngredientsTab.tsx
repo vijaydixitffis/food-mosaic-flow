@@ -124,7 +124,9 @@ export function ProductIngredientsTab({
       {/* Selected Ingredients */}
       {productIngredients.length > 0 && (
         <div className="space-y-2">
-          {productIngredients.map((pi) => (
+          {[...productIngredients]
+            .sort((a, b) => (a.ingredient_name || '').localeCompare(b.ingredient_name || ''))
+            .map((pi) => (
             <div key={pi.ingredient_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
               <span className="text-sm">
                 {pi.ingredient_name} - Quantity: {pi.quantity}

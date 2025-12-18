@@ -44,6 +44,6 @@
   th {
     background-color: #f3f4f6 !important;
     -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    print-color-adjust: exact;
   }
 } 

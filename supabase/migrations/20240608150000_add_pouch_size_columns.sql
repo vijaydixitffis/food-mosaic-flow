@@ -16,5 +16,5 @@ ALTER COLUMN total_weight SET NOT NULL;
 
 -- Add check constraints
 ALTER TABLE work_order_products
-ADD CONSTRAINT check_pouch_size_positive CHECK (pouch_size_g > 0),
-ADD CONSTRAINT check_total_weight_positive CHECK (total_weight_g > 0);
+ADD CONSTRAINT check_pouch_size_positive CHECK (pouch_size > 0),
+ADD CONSTRAINT check_total_weight_positive CHECK (total_weight > 0);
