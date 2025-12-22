@@ -118,7 +118,6 @@ export function ClientDialog({
                 value={formData.company_registration_number}
                 onChange={(e) => setFormData({ ...formData, company_registration_number: e.target.value })}
                 disabled={isReadOnly}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -128,7 +127,6 @@ export function ClientDialog({
                 value={formData.office_phone_number}
                 onChange={(e) => setFormData({ ...formData, office_phone_number: e.target.value })}
                 disabled={isReadOnly}
-                required
               />
             </div>
           </div>
@@ -141,7 +139,6 @@ export function ClientDialog({
                 value={formData.gst_number}
                 onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
                 disabled={isReadOnly}
-                required
                 placeholder="e.g., 27ABCDE1234F1Z5"
               />
             </div>
@@ -180,7 +177,6 @@ export function ClientDialog({
                 value={formData.contact_person}
                 onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
                 disabled={isReadOnly}
-                required
               />
             </div>
             <div className="space-y-2">
