@@ -38,6 +38,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       name: string;
       sale_price: number | null;
       hsn_code: string;
+      gst: number | null;
     };
   }>;
 };
@@ -101,7 +102,8 @@ export function OrdersPage() {
                 id,
                 name,
                 sale_price,
-                hsn_code
+                hsn_code,
+                gst
               )
             )
           `)
