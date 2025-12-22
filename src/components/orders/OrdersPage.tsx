@@ -27,6 +27,11 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     is_igst: boolean;
     discount: number;
   };
+  categories: {
+    id: string;
+    category_name: string;
+    sequence: number;
+  };
   order_products: Array<{
     id: string;
     product_id: string;
@@ -91,6 +96,11 @@ export function OrdersPage() {
               gst_number,
               is_igst,
               discount
+            ),
+            categories (
+              id,
+              category_name,
+              sequence
             ),
             order_products (
               id,

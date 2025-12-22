@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, Eye } from 'lucide-react';
+import { Edit, Eye, DollarSign, Package, BookOpen } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -23,7 +23,19 @@ type ProductWithIngredients = Product & {
       name: string;
       unit_of_measurement: string | null;
     };
-  }>; // Add stock property to ProductWithIngredients type
+  }>;
+  product_compounds: Array<{
+    id: string;
+    compound_id: string;
+    quantity: number;
+    compounds: {
+      id: string;
+      name: string;
+      unit_of_measurement: string | null;
+    };
+  }>;
+  tags: string[];
+  active: boolean;
   stock: number | null;
 };
 
@@ -85,6 +97,9 @@ interface ProductsTableProps {
   onEdit: (product: ProductWithIngredients) => void;
   onDelete: (productId: string) => void;
   onToggleActive: (productId: string, currentActive: boolean) => void;
+  onManageRecipe: (product: ProductWithIngredients) => void;
+  onManagePrice: (product: ProductWithIngredients) => void;
+  onManageStock: (product: ProductWithIngredients) => void;
   isReadOnly?: boolean;
 }
 
@@ -94,8 +109,20 @@ export function ProductsTable({
   onEdit,
   onDelete,
   onToggleActive,
+  onManageRecipe,
+  onManagePrice,
+  onManageStock,
   isReadOnly = false,
-}: ProductsTableProps) {
+}: ProductsTableProps): JSX.Element {
+  const formatTags = (tags: string[] | null) => {
+    if (!tags || tags.length === 0) return null;
+    return tags.map((tag, index) => (
+      <Badge key={index} variant="secondary" className="text-xs">
+        {tag}
+      </Badge>
+    ));
+  };
+
   if (isLoading) {
     return (
       <div className="border rounded-lg p-8">
@@ -122,15 +149,6 @@ export function ProductsTable({
     );
   }
 
-  const formatTags = (tags: string[] | null) => {
-    if (!tags || tags.length === 0) return null;
-    return tags.map((tag, index) => (
-      <Badge key={index} variant="secondary" className="text-xs">
-        {tag}
-      </Badge>
-    ));
-  };
-
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -138,8 +156,6 @@ export function ProductsTable({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Sale Price</TableHead>
-            <TableHead>Stock</TableHead> {/* Add Stock column header */}
             <TableHead>Tags</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -154,33 +170,60 @@ export function ProductsTable({
                 </div>
               </TableCell>
               <TableCell>
-                {product.sale_price ? `₹${Number(product.sale_price).toFixed(2)}` : '-'}
-              </TableCell>
-              <TableCell>
-                {product.stock !== null ? product.stock : '-'} {/* Display product stock */}
-              </TableCell>
-              <TableCell>
                 <div className="flex flex-wrap gap-1">
                   {formatTags(product.tags)}
                 </div>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <StatusSlider
                     isActive={product.active}
                     onToggle={() => onToggleActive(product.id, product.active)}
                     productName={product.name}
                     disabled={isReadOnly}
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(product)}
-                    className="flex items-center gap-1"
-                  >
-                    {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
-                    {isReadOnly ? 'View' : 'Edit'}
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(product)}
+                      className="flex items-center justify-center p-2"
+                      title={isReadOnly ? 'View' : 'Edit'}
+                    >
+                      {isReadOnly ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                    </Button>
+                    {!isReadOnly && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onManageRecipe(product)}
+                          className="flex items-center justify-center p-2"
+                          title="Manage Recipe"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onManagePrice(product)}
+                          className="flex items-center justify-center p-2"
+                          title="Manage Price"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onManageStock(product)}
+                          className="flex items-center justify-center p-2"
+                          title="Manage Stock"
+                        >
+                          <Package className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </TableCell>
             </TableRow>

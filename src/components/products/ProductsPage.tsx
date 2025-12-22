@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductsTable } from './ProductsTable';
-import { ProductDialog } from './ProductDialog';
 import { ProductsPagination } from './ProductsPagination';
+import { ProductBasicInfoDialog } from './ProductBasicInfoDialog';
+import { ProductRecipeDialog } from './ProductRecipeDialog';
+import { ProductPriceDialog } from './ProductPriceDialog';
+import { ProductStockDialog } from './ProductStockDialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
-
 
 type Product = Database['public']['Tables']['products']['Row'] & { stock: number | null }; // Add stock property
 type ProductWithIngredients = Product & {
@@ -40,8 +42,8 @@ export function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductWithIngredients | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithIngredients | null>(null);
+  const [dialogType, setDialogType] = useState<'basic' | 'recipe' | 'price' | 'stock' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isStaff, isAdmin, user, profile } = useAuth();
@@ -93,7 +95,7 @@ export function ProductsPage() {
         console.log('ProductsPage - Count query successful, count:', count);
         console.log('ProductsPage - About to execute data query');
 
-        // Get all results (we\'ll filter client-side for consistent partial matching)
+        // Get all results (we'll filter client-side for consistent partial matching)
         const { data, error } = await query;
 
         if (error) {
@@ -128,6 +130,9 @@ export function ProductsPage() {
           );
           filteredCount = filteredData.length;
         }
+
+        // Ensure alphabetical ordering is maintained after filtering
+        filteredData.sort((a, b) => a.name.localeCompare(b.name));
 
         // Apply pagination to filtered results
         const startIndex = (currentPage - 1) * pageSize;
@@ -228,13 +233,29 @@ export function ProductsPage() {
       });
       return;
     }
-    setEditingProduct(null);
-    setIsDialogOpen(true);
+    setSelectedProduct(null);
+    setDialogType('basic');
   };
 
   const handleEditProduct = (product: ProductWithIngredients) => {
-    setEditingProduct(product);
-    setIsDialogOpen(true);
+    setSelectedProduct(product);
+    setDialogType('basic');
+  };
+
+  const handleManageRecipe = (product: ProductWithIngredients) => {
+    console.log('handleManageRecipe called with product:', product);
+    setSelectedProduct(product);
+    setDialogType('recipe');
+  };
+
+  const handleManagePrice = (product: ProductWithIngredients) => {
+    setSelectedProduct(product);
+    setDialogType('price');
+  };
+
+  const handleManageStock = (product: ProductWithIngredients) => {
+    setSelectedProduct(product);
+    setDialogType('stock');
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -272,6 +293,19 @@ export function ProductsPage() {
     setCurrentPage(1);
   };
 
+  const handleDialogClose = () => {
+    setDialogType(null);
+    setSelectedProduct(null);
+  };
+
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    toast({
+      title: "Success",
+      description: "Operation completed successfully",
+    });
+  };
+
   return (
     <div className="px-6 py-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -289,7 +323,7 @@ export function ProductsPage() {
           </div>
         </div>
         {!isStaff && (
-          <div className="flex gap-4"> {/* Use a flex container for buttons */}
+          <div className="flex gap-4">
             <Button onClick={handleAddProduct} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Add Product
@@ -298,15 +332,14 @@ export function ProductsPage() {
         )}
       </div>
 
-
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
         <Input
           placeholder="Search products by name, description, or tags..."
+          className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
         />
       </div>
 
@@ -331,6 +364,9 @@ export function ProductsPage() {
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onToggleActive={handleToggleActive}
+        onManageRecipe={handleManageRecipe}
+        onManagePrice={handleManagePrice}
+        onManageStock={handleManageStock}
         isReadOnly={isStaff}
       />
 
@@ -344,15 +380,36 @@ export function ProductsPage() {
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {/* Product Dialog */}
-      <ProductDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        product={editingProduct}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] });
-          setIsDialogOpen(false);
-        }}
+      {/* Dialogs */}
+      <ProductBasicInfoDialog
+        isOpen={dialogType === 'basic'}
+        onClose={handleDialogClose}
+        product={selectedProduct}
+        onSuccess={handleSuccess}
+        isReadOnly={isStaff}
+      />
+
+      <ProductRecipeDialog
+        isOpen={dialogType === 'recipe'}
+        onClose={handleDialogClose}
+        product={selectedProduct}
+        onSuccess={handleSuccess}
+        isReadOnly={isStaff}
+      />
+
+      <ProductPriceDialog
+        isOpen={dialogType === 'price'}
+        onClose={handleDialogClose}
+        product={selectedProduct}
+        onSuccess={handleSuccess}
+        isReadOnly={isStaff}
+      />
+
+      <ProductStockDialog
+        isOpen={dialogType === 'stock'}
+        onClose={handleDialogClose}
+        product={selectedProduct}
+        onSuccess={handleSuccess}
         isReadOnly={isStaff}
       />
     </div>

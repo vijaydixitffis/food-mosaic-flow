@@ -13,15 +13,10 @@ import { z } from 'zod';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  hsn_code: z.string().min(1, 'HSN code is required'),
   description: z.string().optional(),
   pack_type: z.string().optional(),
   client_note: z.string().optional(),
   remarks: z.string().optional(),
-  sale_price: z.string().optional(),
-  gst: z.string().refine(val => val === '' || (!isNaN(Number(val)) && Number(val) >= 0 && Number(val) < 100), {
-    message: 'GST must be between 0 and 99.99',
-  }),
 });
 
 interface ProductBasicInfoFormProps {
@@ -48,47 +43,12 @@ export function ProductBasicInfoForm({ form }: ProductBasicInfoFormProps) {
 
         <FormField
           control={form.control}
-          name="hsn_code"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>HSN Code *</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter HSN code" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="pack_type"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Pack Type</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Box, Bottle, Bag" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="gst"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>GST (%)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="99.99"
-                  placeholder="0.00"
-                  {...field}
-                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -114,25 +74,7 @@ export function ProductBasicInfoForm({ form }: ProductBasicInfoFormProps) {
         )}
       />
 
-      <FormField
-        control={form.control}
-        name="sale_price"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Sale Price</FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...field}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}

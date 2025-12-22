@@ -26,6 +26,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     order_date: '',
     target_delivery_date: '',
     client: null,
+    category: null,
     products: [],
     status: ORDER_STATUSES.NEW,
   });
@@ -49,6 +50,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         order_date: order.order_date || '',
         target_delivery_date: order.target_delivery_date || '',
         client: order.clients || null,
+        category: order.categories || null,
         products: mappedProducts,
         status: order.status || ORDER_STATUSES.NEW,
       });
@@ -59,6 +61,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         order_date: '',
         target_delivery_date: '',
         client: null,
+        category: null,
         products: [],
         status: ORDER_STATUSES.NEW,
       });
@@ -85,6 +88,19 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         .select('id, name')
         .eq('active', true)
         .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch categories for dropdown
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sequence', { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -138,6 +154,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         order_date: data.order_date,
         target_delivery_date: data.target_delivery_date,
         client_id: data.client?.id,
+        category_id: data.category?.id || null,
         status: data.status,
       };
       // Prepare order products data
@@ -372,6 +389,38 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                   </select>
                 </div>
               </div>
+              {/* Category display - only for edit orders */}
+              {order && (
+                <div className="space-y-2 mb-4">
+                  <label>Category</label>
+                  <div className="w-full border rounded px-2 py-1 bg-gray-50 text-gray-700">
+                    {formData.category?.category_name || 'No category assigned'}
+                  </div>
+                </div>
+              )}
+              {/* Category dropdown - only for new orders */}
+              {!order && (
+                <div className="space-y-2 mb-4">
+                  <label htmlFor="category">Category *</label>
+                  <select
+                    value={formData.category?.id || ''}
+                    onChange={e => {
+                      const selected = categories.find(c => c.id === e.target.value);
+                      setFormData({ ...formData, category: selected });
+                    }}
+                    disabled={isReadOnly || isLoadingCategories}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  >
+                    <option value="">Select category</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.category_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="order_code">Order Code</label>

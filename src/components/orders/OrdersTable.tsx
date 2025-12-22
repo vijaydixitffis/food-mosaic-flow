@@ -71,6 +71,7 @@ export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleSt
           <TableRow>
             <TableHead className="w-[120px]">Order Code</TableHead>
             <TableHead className="w-[200px]">Client</TableHead>
+            <TableHead className="w-[150px]">Category</TableHead>
             <TableHead className="w-[120px]">Order Date</TableHead>
             <TableHead className="w-[140px]">Target Delivery</TableHead>
             <TableHead className="w-[300px]">Actions</TableHead>
@@ -87,6 +88,11 @@ export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleSt
                   <div className="flex flex-col">
                     <span className="font-medium text-sm">{order.clients?.client_code || 'N/A'}</span>
                     <span className="text-xs text-gray-500">{order.clients?.name || 'Unknown Client'}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm">{order.categories.category_name}</span>
                   </div>
                 </TableCell>
                 <TableCell>{order.order_date}</TableCell>

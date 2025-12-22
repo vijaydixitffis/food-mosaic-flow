@@ -4,6 +4,7 @@ import { CompoundsPage } from '@/components/compounds/CompoundsPage';
 import { ProductsPage } from '@/components/products/ProductsPage';
 import { RecipesPage } from '@/components/recipes/RecipesPage';
 import { ClientsPage } from '@/components/clients/ClientsPage';
+import { CategoriesPage } from '@/components/categories/CategoriesPage';
 import { OrdersPage } from '@/components/orders/OrdersPage';
 import { WorkOrdersPage } from '@/components/work-orders/WorkOrdersPage';
 import { InvoicesPage } from '@/components/invoice/InvoicesPage';
@@ -47,6 +48,8 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
         return <RecipesPage />;
       case 'clients':
         return <ClientsPage />;
+      case 'categories':
+        return <CategoriesPage />;
       case 'orders':
         return <OrdersPage />;
       case 'work-orders':

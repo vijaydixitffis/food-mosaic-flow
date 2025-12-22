@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, X, Search } from 'lucide-react';
@@ -39,7 +39,8 @@ export function ProductIngredientsTab({
 
   const filteredIngredients = searchValue.length >= 2
     ? ingredients.filter(ingredient => 
-        ingredient.name.toLowerCase().includes(searchValue.toLowerCase())
+        ingredient.name.toLowerCase().includes(searchValue.toLowerCase()) &&
+        !productIngredients.some(pi => pi.ingredient_id === ingredient.id)
       )
     : [];
 
@@ -65,7 +66,7 @@ export function ProductIngredientsTab({
 
   return (
     <div className="space-y-4">
-      <FormLabel>Product Ingredients * (Add at least one ingredient or compound)</FormLabel>
+      <Label>Product Ingredients * (Add at least one ingredient or compound)</Label>
       
       {/* Add Ingredient */}
       <div className="flex gap-2">

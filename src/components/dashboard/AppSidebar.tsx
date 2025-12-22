@@ -24,7 +24,8 @@ import {
   Utensils,
   Factory,
   Settings,
-  User
+  User,
+  Tag
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -63,6 +64,12 @@ const adminMenuItems = [
     url: "#",
     icon: Users,
     view: "clients",
+  },
+  {
+    title: "Categories",
+    url: "#",
+    icon: Tag,
+    view: "categories",
   },
   {
     title: "Orders",
@@ -155,6 +162,7 @@ export function AppSidebar({ currentView, onViewChange, profile }: AppSidebarPro
                             item.title === 'Products' ? 'text-amber-500' :
                             item.title === 'Recipes' ? 'text-orange-500' :
                             item.title === 'Clients' ? 'text-green-500' :
+                            item.title === 'Categories' ? 'text-purple-500' :
                             item.title === 'Orders' ? 'text-amber-500' :
                             item.title === 'Work Orders' ? 'text-green-600' :
                             item.title === 'Invoices' ? 'text-orange-500' :
