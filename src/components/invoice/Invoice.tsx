@@ -426,21 +426,17 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             {/* Terms and Conditions */}
             <div className="mb-8">
               <h3 className="text-base font-semibold text-gray-900 mb-2">Terms & Conditions:</h3>
-              <div className="text-sm text-gray-600 space-y-1">
+              <div className="text-sm text-gray-600 whitespace-pre-wrap">
                 {(() => {
-                  const termsParam = getParamByKeywords('terms', 'condition');
+                  const termsParam = getParamByKeywords('terms_conditions');
                   return termsParam ? (
-                    termsParam.value.split('\n').map((line, index) => (
-                      <p key={index}>{line}</p>
-                    ))
+                    termsParam.value.replace(/\\n/g, '\n')
                   ) : (
-                    <>
-                      <p>1. Payment is due within 30 days of invoice date.</p>
-                      <p>2. Goods once sold will not be taken back.</p>
-                      <p>3. Interest will be charged on overdue payments.</p>
-                      <p>4. All disputes are subject to local jurisdiction.</p>
-                      <p>5. Delivery will be made as per agreed schedule.</p>
-                    </>
+                    `1. Payment is due within 30 days of invoice date.
+2. Goods once sold will not be taken back.
+3. Interest will be charged on overdue payments.
+4. All disputes are subject to local jurisdiction.
+5. Delivery will be made as per agreed schedule.`
                   );
                 })()}
               </div>
