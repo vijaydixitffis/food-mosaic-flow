@@ -14,12 +14,11 @@ export default defineConfig(({ mode }) => ({
   ],
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
-      output: {
-        manualChunks: undefined,
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
       },
-      external: [],
     },
   },
   resolve: {

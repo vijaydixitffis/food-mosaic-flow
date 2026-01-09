@@ -25,3 +25,6 @@ dist-ssr
 
 # Ignore environment variable files
 .env*
+
+# Ignore root index.html to prevent deployment conflicts
+index.html
