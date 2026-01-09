@@ -150,7 +150,12 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
   function calcGSTOnTaxableValue(taxableValue: number, gstPercent: number) {
     return taxableValue * (gstPercent / 100);
   }
-
+// Calculate total MRP value (MRP * Quantity for all products)
+const totalMRPValue = order.order_products.reduce((sum, item) => {
+  const mrp = getProductPrice(item); // This gets the MRP
+  const quantity = item.number_of_pouches;
+  return sum + (mrp * quantity);
+}, 0);
   // Calculate total (Taxable Value + GST Amount)
   function calcTotal(taxableValue: number, gstAmount: number) {
     return taxableValue + gstAmount;
@@ -418,14 +423,19 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             {/* Totals */}
             <div className="flex justify-end mb-8">
               <div className="w-80 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>Total Taxable Value:</span>
-                  <span>₹{totalTaxableValue.toFixed(2)}</span>
-                </div>
+              <div className="flex justify-between">
+  <span>Total MRP Value:</span>
+  <span>₹{totalMRPValue.toFixed(2)}</span>
+</div>
                 <div className="flex justify-between">
                   <span>Total Discount Amount:</span>
                   <span>₹{totalDiscountAmount.toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Total Taxable Value:</span>
+                  <span>₹{totalTaxableValue.toFixed(2)}</span>
+                </div>
+                
                 <div className="flex justify-between">
                   <span>Total GST:</span>
                   <span>₹{totalGST.toFixed(2)}</span>

@@ -153,8 +153,7 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
           </div>
         </div>
         
-// Add this to your CompanyInfo.tsx file
-<div className="grid grid-cols-2 gap-4 text-sm border-t pt-3" style={{ display: 'grid' }}>
+        <div className="grid grid-cols-2 gap-4 text-sm border-t pt-3" style={{ display: 'grid' }}>
   {fssaiParam && (
     <div>
       <span className="font-semibold text-gray-700">FSSAI Number:</span>
