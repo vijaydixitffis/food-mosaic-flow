@@ -203,16 +203,58 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
   const handleDownload = () => {
     const element = document.getElementById('invoice-content');
     if (!element) return;
-    html2pdf()
-      .set({
-        margin: 0.05,
-        filename: `Invoice-${order.order_code}.pdf`,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 1.2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      })
-      .from(element)
-      .save();
+    
+    // Add a class to trigger PDF-specific styles
+    element.classList.add('pdf-export');
+    
+    // Wait a frame for CSS to apply before calculating dimensions
+    requestAnimationFrame(() => {
+      // Calculate optimal scale to fit content on one A4 page
+      // A4 dimensions: 8.27 x 11.69 inches (210 x 297 mm)
+      // Accounting for margins: usable area
+      const margin = 0.15; // Reduced margin for more space
+      const a4Width = 8.27; // inches
+      const a4Height = 11.69; // inches
+      
+      // Use smaller scale for html2canvas to capture more content
+      // Combined with CSS scaling, this should fit everything on one page
+      html2pdf()
+        .set({
+          margin: [margin, margin, margin, margin], // [top, right, bottom, left] in inches
+          filename: `Invoice-${order.order_code}.pdf`,
+          image: { type: 'png', quality: 1 }, // Use PNG for better text quality
+          html2canvas: { 
+            scale: 2, // Higher scale for sharper text rendering
+            useCORS: true,
+            letterRendering: true,
+            logging: false,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            removeContainer: true,
+            imageTimeout: 0
+          },
+          jsPDF: { 
+            unit: 'in', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: false // Disable compression for better quality
+          },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          enableLinks: false
+        })
+        .from(element)
+        .save()
+        .then(() => {
+          // Remove the class after PDF generation
+          element.classList.remove('pdf-export');
+        })
+        .catch((error) => {
+          console.error('Error generating PDF:', error);
+          element.classList.remove('pdf-export');
+        });
+    });
   };
 
   const invoiceNumber = generateInvoiceNumber();

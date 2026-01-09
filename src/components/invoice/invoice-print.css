@@ -1,3 +1,170 @@
+/* PDF export styles - applied when generating PDF */
+#invoice-content.pdf-export {
+  padding: 8px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  transform-origin: top left;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-smooth: always;
+}
+
+#invoice-content.pdf-export * {
+  box-sizing: border-box;
+}
+
+#invoice-content.pdf-export .text-xs {
+  font-size: 10px !important;
+}
+
+#invoice-content.pdf-export .text-sm {
+  font-size: 11px !important;
+}
+
+#invoice-content.pdf-export .text-base {
+  font-size: 12px !important;
+}
+
+#invoice-content.pdf-export .text-lg {
+  font-size: 14px !important;
+}
+
+#invoice-content.pdf-export h2,
+#invoice-content.pdf-export h3 {
+  font-size: 14px !important;
+  margin: 3px 0 !important;
+  line-height: 1.2 !important;
+}
+
+#invoice-content.pdf-export table {
+  font-size: 12px !important;
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: always;
+}
+
+#invoice-content.pdf-export th,
+#invoice-content.pdf-export td {
+  padding: 4px 5px !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+}
+
+#invoice-content.pdf-export th {
+  font-weight: 600;
+  font-size: 12px !important;
+}
+
+/* Optimize table column widths - give more space to Product Name, less to numeric columns */
+#invoice-content.pdf-export table {
+  table-layout: auto; /* Use auto layout for better flexibility */
+}
+
+/* Constrain narrow columns (Sr., Qty, GST %) */
+#invoice-content.pdf-export table th:nth-child(1),
+#invoice-content.pdf-export table td:nth-child(1) {
+  width: 25px !important; /* Sr. */
+  max-width: 25px !important;
+}
+
+#invoice-content.pdf-export table th:nth-child(5),
+#invoice-content.pdf-export table td:nth-child(5) {
+  width: 35px !important; /* Qty */
+  max-width: 35px !important;
+}
+
+#invoice-content.pdf-export table th:nth-child(8),
+#invoice-content.pdf-export table td:nth-child(8) {
+  width: 40px !important; /* GST % */
+  max-width: 40px !important;
+}
+
+/* Constrain numeric columns to be compact */
+#invoice-content.pdf-export table th:nth-child(3),
+#invoice-content.pdf-export table td:nth-child(3),
+#invoice-content.pdf-export table th:nth-child(4),
+#invoice-content.pdf-export table td:nth-child(4),
+#invoice-content.pdf-export table th:nth-child(6),
+#invoice-content.pdf-export table td:nth-child(6),
+#invoice-content.pdf-export table th:nth-child(7),
+#invoice-content.pdf-export table td:nth-child(7),
+#invoice-content.pdf-export table th:nth-child(9),
+#invoice-content.pdf-export table td:nth-child(9),
+#invoice-content.pdf-export table th:nth-child(10),
+#invoice-content.pdf-export table td:nth-child(10),
+#invoice-content.pdf-export table th:last-child,
+#invoice-content.pdf-export table td:last-child {
+  width: auto !important;
+  max-width: 65px !important; /* Limit width of numeric columns */
+  white-space: nowrap;
+}
+
+/* Product Name gets remaining space - no width constraint */
+#invoice-content.pdf-export table th:nth-child(2),
+#invoice-content.pdf-export table td:nth-child(2) {
+  width: auto !important;
+  min-width: 120px; /* Minimum space for product names */
+}
+
+/* Ensure table text is crisp */
+#invoice-content.pdf-export table * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#invoice-content.pdf-export .mb-1 {
+  margin-bottom: 2px !important;
+}
+
+#invoice-content.pdf-export .mb-2 {
+  margin-bottom: 3px !important;
+}
+
+#invoice-content.pdf-export .mb-4 {
+  margin-bottom: 4px !important;
+}
+
+#invoice-content.pdf-export .mb-6 {
+  margin-bottom: 5px !important;
+}
+
+#invoice-content.pdf-export .mb-8 {
+  margin-bottom: 6px !important;
+}
+
+#invoice-content.pdf-export .space-y-1 > * + * {
+  margin-top: 2px !important;
+}
+
+#invoice-content.pdf-export .space-y-2 > * + * {
+  margin-top: 3px !important;
+}
+
+#invoice-content.pdf-export .gap-4 {
+  gap: 5px !important;
+}
+
+#invoice-content.pdf-export .gap-8 {
+  gap: 6px !important;
+}
+
+#invoice-content.pdf-export p {
+  margin: 2px 0 !important;
+  line-height: 1.3 !important;
+}
+
 /* Print styles for invoice */
 @media print {
   body * {
