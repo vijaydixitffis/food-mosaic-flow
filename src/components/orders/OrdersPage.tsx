@@ -84,7 +84,7 @@ export function OrdersPage() {
   const { data: ordersData, isLoading, error } = useQuery({
     queryKey: ['orders', searchTerm, currentPage, pageSize],
     queryFn: async () => {
-      console.log('OrdersPage - Starting query with auth state:', {
+      console.log('OrdersPage - Starting query with auth state-', {
         userId: user?.id,
         userRole: profile?.role,
         isAuthenticated: !!user
