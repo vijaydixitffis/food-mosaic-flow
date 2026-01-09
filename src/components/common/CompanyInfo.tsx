@@ -135,27 +135,27 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
         
         <div className="grid grid-cols-2 gap-4 text-sm border-t pt-3">
           {settings.registration_number && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-gray-700 mb-1">Registration Number:</span>
-              <span className="text-gray-600">{settings.registration_number}</span>
+            <div>
+              <span className="font-semibold text-gray-700">Registration Number:</span>
+              <span className="ml-2 text-gray-600">{settings.registration_number}</span>
             </div>
           )}
           {settings.gst_number && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-gray-700 mb-1">GST Number:</span>
-              <span className="text-gray-600">{settings.gst_number}</span>
+            <div>
+              <span className="font-semibold text-gray-700">GST Number:</span>
+              <span className="ml-2 text-gray-600">{settings.gst_number}</span>
             </div>
           )}
           {settings.contact_number && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-gray-700 mb-1">Contact Number:</span>
-              <span className="text-gray-600">{settings.contact_number}</span>
+            <div>
+              <span className="font-semibold text-gray-700">Contact Number:</span>
+              <span className="ml-2 text-gray-600">{settings.contact_number}</span>
             </div>
           )}
           {settings.email && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-gray-700 mb-1">Email:</span>
-              <span className="text-gray-600">{settings.email}</span>
+            <div>
+              <span className="font-semibold text-gray-700">Email:</span>
+              <span className="ml-2 text-gray-600">{settings.email}</span>
             </div>
           )}
         </div>
