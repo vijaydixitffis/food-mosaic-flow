@@ -22,7 +22,7 @@ export function CompanySettingsPage() {
   const { data: companySettings, isLoading, error, refetch } = useQuery({
     queryKey: ['company-settings'],
     queryFn: async () => {
-      console.log('Fetching company settings...');
+      console.log('Fetching company settings...'); // Trigger fresh deployment
       const { data, error } = await supabase
         .from('company_settings')
         .select('*')
