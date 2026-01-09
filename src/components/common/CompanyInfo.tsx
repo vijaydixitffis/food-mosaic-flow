@@ -18,16 +18,10 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
       const { data, error } = await supabase
         .from('company_settings')
         .select('*')
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no data case
 
       console.log('CompanyInfo: Supabase query result:', { data, error });
 
-      // If no rows found, return null instead of throwing error
-      if (error && (error as any).code === 'PGRST116') {
-        console.log('CompanyInfo: No company settings found, returning null');
-        return null;
-      }
-      
       if (error) {
         console.error('CompanyInfo: Error fetching company settings:', error);
         throw error;

@@ -16,14 +16,8 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
       const { data, error } = await supabase
         .from('company_settings')
         .select('company_name, company_logo_url')
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no data case
 
-      // If no rows found, return null instead of throwing error
-      if (error && (error as any).code === 'PGRST116') {
-        console.log('CompanyLogo: No company settings found, returning null');
-        return null;
-      }
-      
       if (error) {
         throw error;
       }

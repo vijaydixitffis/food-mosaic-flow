@@ -39,6 +39,7 @@ export function CompanySettingsForm({
 
   useEffect(() => {
     if (settings) {
+      console.log('Updating form data with settings:', settings);
       setFormData({
         company_name: settings.company_name || '',
         registration_number: settings.registration_number || '',
@@ -48,10 +49,39 @@ export function CompanySettingsForm({
         email: settings.email || '',
         website: settings.website || '',
       });
-      setLogoPreview(settings.company_logo_url);
-      setQrPreview(settings.qr_code_url);
+      
+      // Refresh signed URLs for existing images
+      const refreshImages = async () => {
+        if (settings.company_logo_url && !logoFile) {
+          console.log('Refreshing logo signed URL:', settings.company_logo_url);
+          const refreshedUrl = await refreshSignedUrl(settings.company_logo_url);
+          console.log('Updated logo URL:', refreshedUrl);
+          if (refreshedUrl === '') {
+            // Logo not found in storage, clear the URL
+            setLogoPreview(null);
+            setFormData(prev => ({ ...prev, company_logo_url: null }));
+          } else {
+            setLogoPreview(refreshedUrl);
+          }
+        }
+        
+        if (settings.qr_code_url && !qrFile) {
+          console.log('Refreshing QR signed URL:', settings.qr_code_url);
+          const refreshedUrl = await refreshSignedUrl(settings.qr_code_url);
+          console.log('Updated QR URL:', refreshedUrl);
+          if (refreshedUrl === '') {
+            // QR code not found in storage, clear the URL
+            setQrPreview(null);
+            setFormData(prev => ({ ...prev, qr_code_url: null }));
+          } else {
+            setQrPreview(refreshedUrl);
+          }
+        }
+      };
+      
+      refreshImages();
     }
-  }, [settings]);
+  }, [settings, logoFile, qrFile]);
 
   const handleInputChange = (field: keyof CompanySettings, value: string) => {
     setFormData(prev => ({
@@ -96,24 +126,71 @@ export function CompanySettingsForm({
     setFormData(prev => ({ ...prev, qr_code_url: null }));
   };
 
-  const uploadImage = async (file: File, path: string): Promise<string> => {
+  const refreshSignedUrl = async (signedUrl: string): Promise<string> => {
+  try {
+    // Check if URL is already malformed (contains duplicate paths)
+    if (signedUrl.includes('/storage/v1/object/sign/assets/v1/object/sign/assets/')) {
+      console.log('Detected malformed URL, clearing it');
+      return '';
+    }
+
+    const url = new URL(signedUrl);
+    const pathParts = url.pathname.split('/');
+    
+    // Find the correct path - look for 'assets' and take everything after it
+    const assetsIndex = pathParts.findIndex(part => part === 'assets');
+    if (assetsIndex === -1 || assetsIndex === pathParts.length - 1) {
+      console.log('Could not find valid assets path in URL');
+      return '';
+    }
+    
+    const filePath = pathParts.slice(assetsIndex + 1).join('/');
+    
+    // Generate new signed URL
+    const { data, error } = await supabase.storage
+      .from('assets')
+      .createSignedUrl(filePath, 604800); // 7 days in seconds
+    
+    if (error) {
+      console.error('Error refreshing signed URL:', error);
+      // If object not found, return empty string to indicate no valid URL
+      if (error.message?.includes('Not Found') || error.message?.includes('Object not found')) {
+        console.log('Logo object not found in storage, clearing URL');
+        return '';
+      }
+      return signedUrl; // Return original if other error occurs
+    }
+    
+    return data.signedUrl;
+  } catch (error) {
+    console.error('Error parsing signed URL:', error);
+    return '';
+  }
+};
+
+const uploadImage = async (file: File, path: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${path}/${fileName}`;
 
     const { error } = await supabase.storage
-      .from('company-assets')
+      .from('assets')
       .upload(filePath, file);
 
     if (error) {
       throw error;
     }
 
-    const { data } = supabase.storage
-      .from('company-assets')
-      .getPublicUrl(filePath);
+    // Generate signed URL with 1 week expiration
+    const { data, error: signedUrlError } = await supabase.storage
+      .from('assets')
+      .createSignedUrl(filePath, 604800); // 7 days in seconds
 
-    return data.publicUrl;
+    if (signedUrlError) {
+      throw signedUrlError;
+    }
+
+    return data.signedUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,17 +201,26 @@ export function CompanySettingsForm({
 
       // Upload logo if new file selected
       if (logoFile) {
+        console.log('Uploading logo file:', logoFile.name);
         const logoUrl = await uploadImage(logoFile, 'logos');
         updatedData.company_logo_url = logoUrl;
+        console.log('Logo uploaded successfully:', logoUrl);
       }
 
       // Upload QR code if new file selected
       if (qrFile) {
+        console.log('Uploading QR file:', qrFile.name);
         const qrUrl = await uploadImage(qrFile, 'qr-codes');
         updatedData.qr_code_url = qrUrl;
+        console.log('QR uploaded successfully:', qrUrl);
       }
 
+      console.log('Saving updated data:', updatedData);
       onSave(updatedData);
+      
+      // Clear file states after successful save
+      setLogoFile(null);
+      setQrFile(null);
     } catch (error) {
       console.error('Error uploading images:', error);
     }

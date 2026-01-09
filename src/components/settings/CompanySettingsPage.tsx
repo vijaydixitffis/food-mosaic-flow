@@ -19,23 +19,17 @@ export function CompanySettingsPage() {
   const queryClient = useQueryClient();
 
   // Fetch company settings
-  const { data: companySettings, isLoading, error } = useQuery({
+  const { data: companySettings, isLoading, error, refetch } = useQuery({
     queryKey: ['company-settings'],
     queryFn: async () => {
       console.log('Fetching company settings...');
       const { data, error } = await supabase
         .from('company_settings')
         .select('*')
-        .single();
+        .maybeSingle();
 
-      console.log('Company settings query result:', { data, error });
-      
-      // If no rows found, return null instead of throwing error
-      if (error && (error as any).code === 'PGRST116') {
-        console.log('No company settings found, returning null for setup');
-        return null;
-      }
-      
+      console.log('Company settings query result:', data);
+
       if (error) {
         console.error('Error fetching company settings:', error);
         throw error;
