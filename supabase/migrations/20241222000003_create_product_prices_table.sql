@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS product_prices (
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
   sale_price DECIMAL(10, 2) NOT NULL CHECK (sale_price >= 0),
+  stock DECIMAL(10, 2) ,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   UNIQUE(product_id, category_id)

@@ -277,6 +277,76 @@ export interface Database {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          id: string
+          company_name: string
+          company_logo_url: string | null
+          registration_number: string | null
+          gst_number: string | null
+          contact_number: string | null
+          qr_code_url: string | null
+          address: string | null
+          email: string | null
+          website: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_name: string
+          company_logo_url?: string | null
+          registration_number?: string | null
+          gst_number?: string | null
+          contact_number?: string | null
+          qr_code_url?: string | null
+          address?: string | null
+          email?: string | null
+          website?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_name?: string
+          company_logo_url?: string | null
+          registration_number?: string | null
+          gst_number?: string | null
+          contact_number?: string | null
+          qr_code_url?: string | null
+          address?: string | null
+          email?: string | null
+          website?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_params: {
+        Row: {
+          id: string
+          key: string
+          value: string | null
+          flag: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          value?: string | null
+          flag?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          value?: string | null
+          flag?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

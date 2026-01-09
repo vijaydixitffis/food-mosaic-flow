@@ -1,7 +1,9 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer, X } from 'lucide-react';
 import { CompanyInfo } from '@/components/common/CompanyInfo';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import './invoice-print.css';
 import html2pdf from 'html2pdf.js';
@@ -33,6 +35,12 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       hsn_code: string;
       gst: number | null;
     };
+    product_prices?: {
+      id: string;
+      product_id: string;
+      category_id: string;
+      sale_price: number;
+    } | null;
   }>;
 };
 
@@ -44,6 +52,60 @@ interface InvoiceProps {
 
 export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
   if (!isOpen) return null;
+
+  // Helper function to get the correct sale price for a product based on category-specific pricing
+  const getProductPrice = (orderProduct: Order['order_products'][0]) => {
+    // First try to get category-specific price from product_prices
+    if (orderProduct.product_prices) {
+      return orderProduct.product_prices.sale_price;
+    }
+    
+    // Fallback to product's default sale price
+    return orderProduct.products.sale_price || 0;
+  };
+
+  // Fetch company params
+  const { data: companyParams = [] } = useQuery({
+    queryKey: ['company-params'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_params')
+        .select('*')
+        .eq('flag', true); // Only fetch params marked for invoice
+
+      if (error) {
+        console.error('Error fetching company params:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+  });
+
+  // Helper function to get parameter value by key
+  const getParamValue = (key: string) => {
+    const param = companyParams.find(p => p.key === key);
+    return param?.value || '';
+  };
+
+  // Helper function to get parameters that contain specific keywords
+  const getParamsByKeyword = (keyword: string) => {
+    return companyParams.filter(p => 
+      p.key.toLowerCase().includes(keyword.toLowerCase()) && p.value
+    );
+  };
+
+  // Helper function to get bank-related parameters
+  const getBankParams = () => {
+    return getParamsByKeyword('bank');
+  };
+
+  // Helper function to get parameter by specific keywords
+  const getParamByKeywords = (...keywords: string[]) => {
+    return companyParams.find(p => 
+      keywords.some(keyword => p.key.toLowerCase().includes(keyword.toLowerCase())) && p.value
+    );
+  };
 
   const generateInvoiceNumber = () => {
     const date = new Date();
@@ -100,7 +162,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
   // Sum of all product GSTs
   const totalGSTOriginal = order.order_products.reduce((sum, item) => {
-    const rate = item.products?.sale_price || 0;
+    const rate = getProductPrice(item);
     const qty = item.number_of_pouches;
     const gstPercent = item.products?.gst || 0;
     return sum + calcProductGSTAmount(rate, gstPercent, qty);
@@ -108,7 +170,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
 
   // Total Amount: sum of all product item amounts (sale_price * quantity)
   const totalAmount = order.order_products.reduce((sum, item) => {
-    const rate = item.products?.sale_price || 0;
+    const rate = getProductPrice(item);
     const quantity = item.number_of_pouches;
     return sum + (rate * quantity);
   }, 0);
@@ -116,7 +178,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
   // Discount
   const discountPercent = order.clients.discount || 0;
   const discountAmount = order.order_products.reduce((sum, item) => {
-    const rate = item.products?.sale_price || 0;
+    const rate = getProductPrice(item);
     const quantity = item.number_of_pouches;
     return sum + (rate * quantity) * (discountPercent / 100);
   }, 0);
@@ -244,7 +306,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
                 </thead>
                 <tbody>
                   {order.order_products.map((item, index) => {
-                    const rate = item.products?.sale_price || 0;
+                    const rate = getProductPrice(item);
                     const quantity = item.number_of_pouches;
                     const gstPercent = item.products?.gst || 0;
                     const clientDiscount = order.clients.discount || 0;
@@ -328,15 +390,58 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
               </div>
             </div>
 
+            {/* Declaration */}
+            {(() => {
+              const declarationParam = getParamByKeywords('declaration');
+              return declarationParam && (
+                <div className="mb-8">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">Declaration:</h3>
+                  <div className="text-sm text-gray-600">
+                    <p>{declarationParam.value}</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Bank Details */}
+            {(() => {
+              const bankParams = getBankParams();
+              return bankParams.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">Bank Details:</h3>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {bankParams.map((param) => (
+                      <p key={param.id}>
+                        <span className="font-semibold">
+                          {param.key.charAt(0).toUpperCase() + param.key.slice(1).replace(/_/g, '')}:
+                        </span> {param.value}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Terms and Conditions */}
             <div className="mb-8">
               <h3 className="text-base font-semibold text-gray-900 mb-2">Terms & Conditions:</h3>
               <div className="text-sm text-gray-600 space-y-1">
-                <p>1. Payment is due within 30 days of invoice date.</p>
-                <p>2. Goods once sold will not be taken back.</p>
-                <p>3. Interest will be charged on overdue payments.</p>
-                <p>4. All disputes are subject to local jurisdiction.</p>
-                <p>5. Delivery will be made as per agreed schedule.</p>
+                {(() => {
+                  const termsParam = getParamByKeywords('terms', 'condition');
+                  return termsParam ? (
+                    termsParam.value.split('\n').map((line, index) => (
+                      <p key={index}>{line}</p>
+                    ))
+                  ) : (
+                    <>
+                      <p>1. Payment is due within 30 days of invoice date.</p>
+                      <p>2. Goods once sold will not be taken back.</p>
+                      <p>3. Interest will be charged on overdue payments.</p>
+                      <p>4. All disputes are subject to local jurisdiction.</p>
+                      <p>5. Delivery will be made as per agreed schedule.</p>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -348,7 +453,12 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
               </div>
               <div className="text-center">
                 <div className="border-t-2 border-gray-300 pt-2 w-32 mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">Authorized Signature</p>
+                <p className="text-sm text-gray-600">
+                  {(() => {
+                    const signatoryParam = getParamByKeywords('authorized', 'signatory', 'signature');
+                    return signatoryParam ? signatoryParam.value : 'Authorized Signature';
+                  })()}
+                </p>
               </div>
             </div>
           </div>

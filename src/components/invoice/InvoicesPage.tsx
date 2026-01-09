@@ -37,7 +37,13 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       sale_price: number | null;
       hsn_code: string;
       gst: number | null;
-    };
+    } | null;
+    product_prices?: {
+      id: string;
+      product_id: string;
+      category_id: string;
+      sale_price: number;
+    } | null;
   }>;
 };
 
@@ -52,6 +58,7 @@ export function InvoicesPage() {
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['orders-for-invoice'],
     queryFn: async () => {
+      // First, fetch orders with client and product info
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -87,7 +94,46 @@ export function InvoicesPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Order[];
+
+      // For each order, fetch category-specific prices from product_prices table
+      const ordersWithPrices = await Promise.all(
+        (data || []).map(async (order) => {
+          // Get all product IDs in this order
+          const productIds = order.order_products?.map(op => op.product_id) || [];
+          
+          if (productIds.length === 0) return order;
+
+          // Fetch all category-specific prices for these products
+          const { data: prices, error: priceError } = await supabase
+            .from('product_prices')
+            .select('*')
+            .in('product_id', productIds);
+
+          if (priceError) return order;
+
+          // Group prices by product_id (get all categories for each product)
+          const priceMap = new Map<string, any[]>();
+          prices.forEach(price => {
+            if (!priceMap.has(price.product_id)) {
+              priceMap.set(price.product_id, []);
+            }
+            priceMap.get(price.product_id)!.push(price);
+          });
+
+          // Add product_prices to each order product (all available category prices)
+          const orderProducts = order.order_products?.map(op => ({
+            ...op,
+            product_prices: priceMap.get(op.product_id)?.[0] || null // For now, take first price
+          })) || [];
+
+          return {
+            ...order,
+            order_products: orderProducts
+          };
+        })
+      );
+
+      return ordersWithPrices as Order[];
     },
   });
 

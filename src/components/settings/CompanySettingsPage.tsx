@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Save, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
+import { Settings, Save, Upload, Image as ImageIcon, Building2, FileText } from 'lucide-react';
 import { CompanySettingsForm } from './CompanySettingsForm';
+import { CompanyParamsForm } from './CompanyParamsForm';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
@@ -233,13 +234,19 @@ export function CompanySettingsPage() {
             isLoading={updateMutation.isPending}
           />
           
-          {/* Debug Section */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold text-sm text-gray-700 mb-2">Debug: Raw Company Settings Data</h3>
-            <pre className="text-xs text-gray-600 overflow-auto max-h-40">
-              {JSON.stringify(companySettings, null, 2)}
-            </pre>
-          </div>
+          </CardContent>
+      </Card>
+
+      {/* Company Parameters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Company Parameters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CompanyParamsForm isEditing={isEditing} />
         </CardContent>
       </Card>
 

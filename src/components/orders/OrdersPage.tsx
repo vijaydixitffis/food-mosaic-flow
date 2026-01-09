@@ -45,6 +45,12 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       hsn_code: string;
       gst: number | null;
     };
+    product_prices?: {
+      id: string;
+      product_id: string;
+      category_id: string;
+      sale_price: number;
+    } | null;
   }>;
 };
 
@@ -134,24 +140,11 @@ export function OrdersPage() {
           countQuery = countQuery.or(`order_code.ilike.%${searchTerm}%,remarks.ilike.%${searchTerm}%`);
         }
 
-        const { count, error: countError } = await countQuery;
+        const { count: totalCount } = await countQuery;
+        console.log('OrdersPage - Total count:', totalCount);
 
-        if (countError) {
-          console.error('OrdersPage - Count query error:', {
-            error: countError,
-            message: countError.message,
-            details: countError.details,
-            hint: countError.hint,
-            code: countError.code
-          });
-          throw countError;
-        }
-
-        console.log('OrdersPage - Count query successful, count:', count);
-        console.log('OrdersPage - About to execute data query with pagination');
-
-        // Get paginated results
-        const { data, error } = await query
+        console.log('OrdersPage - About to execute main query');
+        const { data: ordersData, error } = await query
           .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
 
         if (error) {
@@ -166,14 +159,55 @@ export function OrdersPage() {
         }
 
         console.log('OrdersPage - Data query successful:', {
-          dataLength: data?.length,
-          totalCount: count,
-          sampleData: data?.[0]
+          dataLength: ordersData?.length,
+          totalCount: totalCount,
+          sampleData: ordersData?.[0]
         });
 
+        // For each order, fetch category-specific prices from product_prices table
+        const ordersWithPrices = await Promise.all(
+          (ordersData || []).map(async (order) => {
+            // Get all product IDs in this order
+            const productIds = order.order_products?.map(op => op.product_id) || [];
+            
+            if (productIds.length === 0) return order;
+
+            // Fetch all category-specific prices for these products
+            const { data: prices, error: priceError } = await supabase
+              .from('product_prices')
+              .select('*')
+              .in('product_id', productIds);
+
+            if (priceError) {
+              console.error('OrdersPage - Error fetching product prices:', priceError);
+              return order;
+            }
+
+            // Group prices by product_id
+            const priceMap = new Map<string, any[]>();
+            prices.forEach(price => {
+              if (!priceMap.has(price.product_id)) {
+                priceMap.set(price.product_id, []);
+              }
+              priceMap.get(price.product_id)!.push(price);
+            });
+
+            // Add product_prices to each order product
+            const orderProducts = order.order_products?.map(op => ({
+              ...op,
+              product_prices: priceMap.get(op.product_id)?.[0] || null // For now, take first price
+            })) || [];
+
+            return {
+              ...order,
+              order_products: orderProducts
+            };
+          })
+        );
+
         return {
-          orders: data as Order[],
-          total: count || 0
+          orders: ordersWithPrices as Order[],
+          total: totalCount || 0
         };
       } catch (err) {
         console.error('OrdersPage - Query function error:', err);
