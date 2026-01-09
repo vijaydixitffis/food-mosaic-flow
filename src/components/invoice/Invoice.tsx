@@ -311,6 +311,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
                     const gstPercent = item.products?.gst || 0;
                     const clientDiscount = order.clients.discount || 0;
                     const basePrice = calcBasePrice(rate, gstPercent);
+                    const discountedBasePrice = calcDiscountedPrice(basePrice, clientDiscount);
                     const discountAmount = calcDiscountAmount(basePrice, clientDiscount, quantity);
                     const taxableValue = calcTaxableValue(basePrice, clientDiscount, quantity);
                     const gstAmount = calcGSTOnTaxableValue(taxableValue, gstPercent);
@@ -336,7 +337,7 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
                           {quantity}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
-                          ₹{basePrice.toFixed(2)}
+                          ₹{discountedBasePrice.toFixed(2)}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           ₹{taxableValue.toFixed(2)}
