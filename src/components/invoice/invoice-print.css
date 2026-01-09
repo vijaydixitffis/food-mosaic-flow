@@ -16,8 +16,9 @@
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 8px;
     background: white;
+    font-size: 6px !important;
   }
   
   .no-print {
@@ -33,17 +34,71 @@
   table {
     border-collapse: collapse;
     width: 100%;
+    font-size: 5px !important;
   }
   
   th, td {
     border: 1px solid #000;
-    padding: 8px;
+    padding: 1px !important;
     text-align: left;
+    font-size: 5px !important;
   }
   
   th {
     background-color: #f3f4f6 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 5px !important;
+  }
+  
+  /* Ultra-compact fonts for PDF */
+  .text-xs {
+    font-size: 4px !important;
+  }
+  
+  .text-sm {
+    font-size: 5px !important;
+  }
+  
+  .text-base {
+    font-size: 6px !important;
+  }
+  
+  .text-lg {
+    font-size: 7px !important;
+  }
+  
+  h1, h2, h3 {
+    font-size: 8px !important;
+    margin: 2px 0 !important;
+  }
+  
+  /* Ultra-compact layout */
+  .mb-1 {
+    margin-bottom: 2px !important;
+  }
+  
+  .mb-2 {
+    margin-bottom: 4px !important;
+  }
+  
+  .mb-4 {
+    margin-bottom: 4px !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 4px !important;
+  }
+  
+  .mb-8 {
+    margin-bottom: 4px !important;
+  }
+  
+  .space-y-1 {
+    margin-top: 1px !important;
+  }
+  
+  .space-y-2 {
+    margin-top: 2px !important;
   }
 } 

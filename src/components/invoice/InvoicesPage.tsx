@@ -87,7 +87,8 @@ export function InvoicesPage() {
               name,
               sale_price,
               hsn_code,
-              gst
+              gst,
+              pack_type
             )
           )
         `)

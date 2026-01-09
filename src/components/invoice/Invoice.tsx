@@ -34,6 +34,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       sale_price: number | null;
       hsn_code: string;
       gst: number | null;
+      pack_type: string | null;
     };
     product_prices?: {
       id: string;
@@ -204,10 +205,10 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
     if (!element) return;
     html2pdf()
       .set({
-        margin: 0.15,
+        margin: 0.05,
         filename: `Invoice-${order.order_code}.pdf`,
         image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 1.2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       })
       .from(element)
@@ -325,7 +326,10 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
                       <tr key={item.id}>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">{index + 1}</td>
                         <td className="border border-gray-300 px-1 py-0.5">
-                          {(item.products?.name || 'Unknown Product').toUpperCase()}
+                          {item.products?.name && item.products.pack_type 
+                            ? `${item.products.name.toUpperCase()} (${item.products.pack_type})`
+                            : (item.products?.name || 'Unknown Product').toUpperCase()
+                          }
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           {item.products?.hsn_code || 'N/A'}

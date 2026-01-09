@@ -119,7 +119,8 @@ export function OrdersPage() {
                 name,
                 sale_price,
                 hsn_code,
-                gst
+                gst,
+                pack_type
               )
             )
           `)
