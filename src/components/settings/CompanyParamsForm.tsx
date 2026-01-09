@@ -27,15 +27,20 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
   const { data: companyParams, isLoading } = useQuery({
     queryKey: ['company-params'],
     queryFn: async () => {
+      console.log('CompanyParamsForm: Fetching company params...');
       const { data, error } = await supabase
         .from('company_params')
         .select('*')
         .order('key');
 
+      console.log('CompanyParamsForm: Query result:', { data, error });
+
       if (error) {
+        console.error('CompanyParamsForm: Query error:', error);
         throw error;
       }
 
+      console.log('CompanyParamsForm: Returning data:', data || []);
       return data || [];
     },
   });
@@ -48,6 +53,7 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
           .from('company_params')
           .update({ key: param.key, value: param.value, flag: param.flag })
           .eq('id', param.id)
+          .select()
       );
 
       const results = await Promise.all(promises);
@@ -136,7 +142,9 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
   });
 
   useEffect(() => {
+    console.log('CompanyParamsForm: companyParams changed:', companyParams);
     if (companyParams) {
+      console.log('CompanyParamsForm: Setting params state:', companyParams);
       setParams(companyParams);
     }
   }, [companyParams]);
@@ -168,6 +176,7 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
   };
 
   if (isLoading) {
+    console.log('CompanyParamsForm: Showing loading state');
     return (
       <div className="animate-pulse space-y-4">
         <div className="h-4 bg-gray-200 rounded w-1/4"></div>
@@ -176,6 +185,8 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
       </div>
     );
   }
+
+  console.log('CompanyParamsForm: Rendering with params:', params);
 
   return (
     <div className="space-y-6">
