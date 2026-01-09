@@ -1,7 +1,51 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from './types';
 
-export type StockAllocation = Database['public']['Tables']['stock_allocation']['Row'];
+// Extended types for tables not in the generated types
+interface Ingredient {
+  id: string;
+  name: string;
+  unit_of_measurement: string | null;
+  current_stock: number;
+}
+
+interface ProductIngredient {
+  ingredient_id: string;
+  quantity: number;
+  product_id: string;
+  ingredients: Ingredient;
+}
+
+interface CompoundIngredient {
+  ingredient_id: string;
+  quantity: number;
+  ingredients: Ingredient;
+}
+
+interface Compound {
+  id: string;
+  name: string;
+  compound_ingredients: CompoundIngredient[];
+}
+
+interface ProductCompound {
+  compound_id: string;
+  quantity: number;
+  product_id: string;
+  compounds: Compound;
+}
+
+interface StockAllocation {
+  id: string;
+  stock_entry_type: 'INWARD' | 'OUTWARD';
+  stock_type: 'INGREDIENT' | 'PRODUCT';
+  stock_item_id: string;
+  reference_id: string | null;
+  quantity_allocated: number;
+  allocation_date: string;
+}
+
+export type StockAllocationType = StockAllocation;
 
 /**
  * Adds stock to an ingredient (INWARD transaction).
@@ -43,7 +87,7 @@ export async function addIngredientStock(data: {
   }
 
   // Create INWARD stock allocation record
-  const { error: allocationError } = await supabase
+  const { data: allocationData, error: allocationError } = await supabase
     .from('stock_allocation')
     .insert([{
       stock_entry_type: 'INWARD',
@@ -51,13 +95,17 @@ export async function addIngredientStock(data: {
       stock_item_id: data.ingredient_id,
       reference_id: data.reference_id || null,
       quantity_allocated: data.quantity
-    }]);
+    }])
+    .select()
+    .single() as { data: StockAllocation | null; error: any };
 
   if (allocationError) {
-    console.error('Error creating stock allocation record:', allocationError);
-    // Note: We don't rollback the ingredient update here for simplicity
-    // In production, you might want to implement proper transaction handling
+    console.error('Error creating ingredient stock allocation record:', allocationError);
+    // Return the allocation error so the caller knows something went wrong
+    return { data: null, error: allocationError };
   }
+
+  console.log('Ingredient stock allocation created successfully:', allocationData);
 
   return { data: updatedIngredient, error: null };
 }
@@ -102,7 +150,7 @@ export async function addProductStock(data: {
   }
 
   // Create INWARD stock allocation record
-  const { error: allocationError } = await supabase
+  const { data: allocationData, error: allocationError } = await supabase
     .from('stock_allocation')
     .insert([{
       stock_entry_type: 'INWARD',
@@ -110,11 +158,17 @@ export async function addProductStock(data: {
       stock_item_id: data.product_id,
       reference_id: data.reference_id || null,
       quantity_allocated: data.quantity
-    }]);
+    }])
+    .select()
+    .single() as { data: StockAllocation | null; error: any };
 
   if (allocationError) {
-    console.error('Error creating stock allocation record:', allocationError);
+    console.error('Error creating product stock allocation record:', allocationError);
+    // Return the allocation error so the caller knows something went wrong
+    return { data: null, error: allocationError };
   }
+
+  console.log('Product stock allocation created successfully:', allocationData);
 
   return { data: updatedProduct, error: null };
 }
@@ -155,7 +209,7 @@ export async function allocateProductStock(data: { productId: string; orderId: s
         quantity_allocated: quantity
       }])
       .select()
-      .single();
+      .single() as { data: StockAllocation | null; error: any };
 
     if (allocationError) {
       console.error('Error creating stock allocation:', allocationError);
@@ -189,7 +243,7 @@ export async function getStockAllocationsByWorkOrder(workOrderId: string) {
   const { data, error } = await supabase
     .from('stock_allocation')
     .select('*')
-    .eq('reference_id', workOrderId);
+    .eq('reference_id', workOrderId) as { data: StockAllocation[] | null; error: any };
 
   if (error) {
     console.error('Error fetching stock allocations for work order:', error);
@@ -208,7 +262,7 @@ export async function getStockAllocationsByOrder(orderId: string) {
   const { data, error } = await supabase
     .from('stock_allocation')
     .select('*')
-    .eq('reference_id', orderId);
+    .eq('reference_id', orderId) as { data: StockAllocation[] | null; error: any };
 
   if (error) {
     console.error('Error fetching stock allocations for order:', error);
@@ -254,7 +308,7 @@ export async function allocateIngredientStock(data: { ingredientId: string; work
         quantity_allocated: quantity
       }])
       .select()
-      .single();
+      .single() as { data: StockAllocation | null; error: any };
 
     if (allocationError) {
       console.error('Error creating stock allocation:', allocationError);
@@ -323,7 +377,7 @@ export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
           current_stock
         )
       `)
-      .in('product_id', productIds);
+      .in('product_id', productIds) as { data: ProductIngredient[] | null; error: any };
 
     if (piError) {
       console.error('Error fetching product ingredients:', piError);
@@ -352,7 +406,7 @@ export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
           )
         )
       `)
-      .in('product_id', productIds);
+      .in('product_id', productIds) as { data: ProductCompound[] | null; error: any };
 
     if (pcError) {
       console.error('Error fetching product compounds:', pcError);
@@ -385,9 +439,11 @@ export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
       const ingredientId = pi.ingredient_id;
       const unit = pi.ingredients.unit_of_measurement || 'kg';
       
-      // Calculate total ingredient weight: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
+      // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
+      // Since product_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
       const totalProductWeight = (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
-      const totalIngredientWeight = (pi.quantity || 0) * totalProductWeight;
+      const ingredientWeightPerKg = (pi.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+      const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
       const quantityInKg = convertToKg(totalIngredientWeight, unit);
       
       if (!ingredientMap.has(ingredientId)) {
@@ -418,8 +474,10 @@ export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
         const unit = ci.ingredients.unit_of_measurement || 'kg';
         
         // Calculate total ingredient weight
+        // Since compound_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
         const totalProductWeight = (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
-        const totalIngredientWeight = (ci.quantity || 0) * totalProductWeight;
+        const ingredientWeightPerKg = (ci.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+        const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
         const quantityInKg = convertToKg(totalIngredientWeight, unit);
         
         if (!ingredientMap.has(ingredientId)) {
@@ -460,7 +518,7 @@ export async function getIngredientStockHistory(ingredientId: string) {
     .select('*')
     .eq('stock_item_id', ingredientId)
     .eq('stock_type', 'INGREDIENT')
-    .order('allocation_date', { ascending: false });
+    .order('allocation_date', { ascending: false }) as { data: StockAllocation[] | null; error: any };
 
   if (error) {
     console.error('Error fetching ingredient stock history:', error);
@@ -481,7 +539,7 @@ export async function getProductStockHistory(productId: string) {
     .select('*')
     .eq('stock_item_id', productId)
     .eq('stock_type', 'PRODUCT')
-    .order('allocation_date', { ascending: false });
+    .order('allocation_date', { ascending: false }) as { data: StockAllocation[] | null; error: any };
 
   if (error) {
     console.error('Error fetching product stock history:', error);

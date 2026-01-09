@@ -45,9 +45,16 @@ type ProductWithIngredients = Product & {
     compounds: {
       id: string;
       name: string;
-      unit_of_measurement: string | null;
+      description: string;
+      unit_of_measurement: string;
+      created_at: string;
+      updated_at: string;
     };
   }>;
+  pack_type: string | null;
+  client_note: string | null;
+  remarks: string | null;
+  tags: string[] | null;
 };
 
 const productSchema = z.object({
@@ -78,6 +85,7 @@ interface ProductIngredient {
 }
 
 interface ProductCompound {
+  id: string;
   compound_id: string;
   quantity: number;
   compound_name?: string;
@@ -163,7 +171,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
   });
 
   // Use the fetched product data for current stock, fallback to prop
-  const currentStock = currentProduct?.current_stock ?? product?.current_stock ?? 0;
+  const currentStock = currentProduct?.current_stock ?? 0;
 
   // Fetch stock history for this product
   const { data: stockHistory, isLoading: isLoadingHistory } = useQuery({
@@ -182,24 +190,29 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
         pack_type: product.pack_type || '',
         client_note: product.client_note || '',
         remarks: product.remarks || '',
-        sale_price: product.sale_price ? product.sale_price.toString() : '',
-        gst: product.gst !== undefined && product.gst !== null ? product.gst.toString() : '',
+        sale_price: product.sale_price?.toString() || '',
+        gst: product.gst?.toString() || '',
       });
-      setTags(Array.isArray(product.tags) ? product.tags : []);
-      setProductIngredients(
-        product.product_ingredients.map(pi => ({
+      setTags(product.tags || []);
+      
+      // Set ingredients and compounds from product
+      if (product.product_ingredients) {
+        const ingredients = product.product_ingredients.map(pi => ({
+          id: pi.id,
           ingredient_id: pi.ingredient_id,
           quantity: pi.quantity,
-          ingredient_name: pi.ingredients.name,
-        }))
-      );
-      setProductCompounds(
-        product.product_compounds?.map(pc => ({
+        }));
+        setProductIngredients(ingredients);
+      }
+      
+      if (product.product_compounds) {
+        const compounds = product.product_compounds.map(pc => ({
+          id: pc.id,
           compound_id: pc.compound_id,
           quantity: pc.quantity,
-          compound_name: pc.compounds.name,
-        })) || []
-      );
+        }));
+        setProductCompounds(compounds);
+      }
     } else {
       form.reset({
         name: '',
@@ -431,28 +444,29 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
         return;
       }
 
-      // Check if compound already added
-      if (productCompounds.some(pc => pc.compound_id === selectedCompound)) {
-        toast({
-          title: "Error",
-          description: "This compound is already added",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const compound = compounds.find(c => c.id === selectedCompound);
+      if (!compound) return;
+
       setProductCompounds([
         ...productCompounds,
         {
+          id: Date.now().toString(),
           compound_id: selectedCompound,
           quantity,
-          compound_name: compound?.name,
+          compound_name: compound.name,
         },
       ]);
       setSelectedCompound('');
       setCompoundQuantity('1');
     }
+  };
+
+  const updateCompoundQuantity = (compoundId: string, quantity: number) => {
+    setProductCompounds(productCompounds.map(pc => 
+      pc.compound_id === compoundId 
+        ? { ...pc, quantity }
+        : pc
+    ));
   };
 
   const removeCompound = (compoundId: string) => {
@@ -532,11 +546,7 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
                 <ProductCompoundsTab
                   compounds={compounds}
                   productCompounds={productCompounds}
-                  selectedCompound={selectedCompound}
-                  compoundQuantity={compoundQuantity}
-                  onSelectedCompoundChange={setSelectedCompound}
-                  onCompoundQuantityChange={setCompoundQuantity}
-                  onAddCompound={addCompound}
+                  onUpdateQuantity={updateCompoundQuantity}
                   onRemoveCompound={removeCompound}
                 />
               </TabsContent>

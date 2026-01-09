@@ -14,6 +14,39 @@ import {
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { WorkOrderFormData } from './WorkOrderDialog';
 
+// Type definitions for database tables not in generated types
+interface Ingredient {
+  id: string;
+  name: string;
+  unit_of_measurement: string | null;
+}
+
+interface ProductIngredient {
+  ingredient_id: string;
+  quantity: number;
+  product_id: string;
+  ingredients: Ingredient;
+}
+
+interface CompoundIngredient {
+  ingredient_id: string;
+  quantity: number;
+  ingredients: Ingredient;
+}
+
+interface Compound {
+  id: string;
+  name: string;
+  compound_ingredients: CompoundIngredient[];
+}
+
+interface ProductCompound {
+  compound_id: string;
+  quantity: number;
+  product_id: string;
+  compounds: Compound;
+}
+
 interface WorkOrderInventoryTabProps {
   formData: WorkOrderFormData;
   onNext: () => void;
@@ -89,7 +122,7 @@ export function WorkOrderInventoryTab({
             unit_of_measurement
           )
         `)
-        .in('product_id', productIds);
+        .in('product_id', productIds) as { data: ProductIngredient[] | null; error: any };
 
       if (piError) throw piError;
 
@@ -114,7 +147,7 @@ export function WorkOrderInventoryTab({
             )
           )
         `)
-        .in('product_id', productIds);
+        .in('product_id', productIds) as { data: ProductCompound[] | null; error: any };
 
       if (pcError) throw pcError;
 
@@ -130,9 +163,11 @@ export function WorkOrderInventoryTab({
 
         const ingredientId = pi.ingredient_id;
         const unit = pi.ingredients.unit_of_measurement || 'kg';
-        // Calculate total ingredient weight using the formula: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
+        // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
+        // Since product_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
         const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
-        const totalIngredientWeight = (pi.quantity || 0) * totalProductWeight;
+        const ingredientWeightPerKg = (pi.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+        const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
         const quantityInKg = convertToKg(totalIngredientWeight, unit);
         
         if (!ingredientMap.has(ingredientId)) {
@@ -162,10 +197,11 @@ export function WorkOrderInventoryTab({
           
           const ingredientId = ci.ingredient_id;
           const unit = ci.ingredients.unit_of_measurement || 'kg';
-          // Calculate total ingredient weight using the formula: (ingredient_weight / 1000) * [(pouch_size * number_of_pouches) / 1000]
-          // Note: pc.quantity is already accounted for in the product weight calculation
+          // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
+          // Since compound_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
           const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
-          const totalIngredientWeight = (ci.quantity || 0) * totalProductWeight;
+          const ingredientWeightPerKg = (ci.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+          const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
           const quantityInKg = convertToKg(totalIngredientWeight, unit);
           
           if (!ingredientMap.has(ingredientId)) {
