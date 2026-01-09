@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, FileText, IndianRupee, Calendar, User, Package } from 'lucide-react';
 import { Invoice } from './Invoice';
+import { InvoiceNumberDialog } from './InvoiceNumberDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
@@ -37,6 +38,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       sale_price: number | null;
       hsn_code: string;
       gst: number | null;
+      pack_type: string | null;
     } | null;
     product_prices?: {
       id: string;
@@ -51,6 +53,9 @@ export function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [showInvoiceNumberDialog, setShowInvoiceNumberDialog] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
   const { toast } = useToast();
   const { isStaff } = useAuth();
 
@@ -166,12 +171,22 @@ export function InvoicesPage() {
     }
 
     setSelectedOrder(order);
-    setIsInvoiceOpen(true);
+    setInvoiceNumber('');
+    setShowInvoiceNumberDialog(true);
   };
 
   const handleInvoiceClose = () => {
     setIsInvoiceOpen(false);
     setSelectedOrder(null);
+    setInvoiceNumber('');
+    setShowInvoice(false);
+  };
+
+  const handleInvoiceNumberSave = (number: string) => {
+    setInvoiceNumber(number);
+    setShowInvoiceNumberDialog(false);
+    setShowInvoice(true);
+    setIsInvoiceOpen(true);
   };
 
   const calculateOrderTotal = (order: Order) => {
@@ -314,8 +329,18 @@ export function InvoicesPage() {
           order={selectedOrder}
           isOpen={isInvoiceOpen}
           onClose={handleInvoiceClose}
+          invoiceNumber={invoiceNumber}
+          onInvoiceNumberChange={setInvoiceNumber}
         />
       )}
+
+      {/* Invoice Number Dialog */}
+      <InvoiceNumberDialog
+        isOpen={showInvoiceNumberDialog}
+        onClose={() => setShowInvoiceNumberDialog(false)}
+        onSave={handleInvoiceNumberSave}
+        initialValue={invoiceNumber}
+      />
     </div>
   );
 } 

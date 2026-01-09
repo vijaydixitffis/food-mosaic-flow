@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Printer, X } from 'lucide-react';
+import { FileText, Download, Printer, X, Edit2 } from 'lucide-react';
 import { CompanyInfo } from '@/components/common/CompanyInfo';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { InvoiceNumberDialog } from './InvoiceNumberDialog';
 import './invoice-print.css';
 import html2pdf from 'html2pdf.js';
 
@@ -49,10 +50,21 @@ interface InvoiceProps {
   order: Order;
   isOpen: boolean;
   onClose: () => void;
+  invoiceNumber?: string;
+  onInvoiceNumberChange?: (number: string) => void;
 }
 
-export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
+export function Invoice({ 
+  order, 
+  isOpen, 
+  onClose, 
+  invoiceNumber: propInvoiceNumber = '',
+  onInvoiceNumberChange 
+}: InvoiceProps) {
   if (!isOpen) return null;
+  
+  const [localInvoiceNumber, setLocalInvoiceNumber] = useState(propInvoiceNumber);
+  const [showInvoiceNumberDialog, setShowInvoiceNumberDialog] = useState(false);
 
   // Helper function to get the correct sale price for a product based on category-specific pricing
   const getProductPrice = (orderProduct: Order['order_products'][0]) => {
@@ -82,6 +94,32 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
       return data || [];
     },
   });
+
+  // Get the invoice number prefix from company params
+  const invoiceNumberPrefix = useMemo(() => {
+    const param = companyParams.find(p => p.key === 'invoice_number_prefix');
+    return param?.value || 'INV-';
+  }, [companyParams]);
+
+  // Generate a default invoice number if not provided
+  const defaultInvoiceNumber = useMemo(() => {
+    return `${invoiceNumberPrefix}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+  }, [invoiceNumberPrefix]);
+
+  // Get the full invoice number (prefix + user number)
+  const fullInvoiceNumber = useMemo(() => {
+    if (localInvoiceNumber) {
+      return `${invoiceNumberPrefix}${localInvoiceNumber}`;
+    }
+    return defaultInvoiceNumber;
+  }, [localInvoiceNumber, invoiceNumberPrefix, defaultInvoiceNumber]);
+
+  const handleInvoiceNumberSave = (number: string) => {
+    setLocalInvoiceNumber(number);
+    if (onInvoiceNumberChange) {
+      onInvoiceNumberChange(number);
+    }
+  };
 
   // Helper function to get parameter value by key
   const getParamValue = (key: string) => {
@@ -262,7 +300,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
     });
   };
 
-  const invoiceNumber = generateInvoiceNumber();
+  const invoiceNumber = fullInvoiceNumber;
   const currentDate = new Date().toLocaleDateString('en-IN');
   
   // Determine invoice title based on order status
@@ -296,7 +334,10 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
               </div>
               <div className="text-right">
                 <div className="space-y-1 text-sm">
-                  <p><span className="font-semibold">Invoice No:</span> {invoiceNumber}</p>
+                  <div>
+                    <span className="font-semibold">Invoice No:</span>
+                    <span>{invoiceNumber}</span>
+                  </div>
                   <p><span className="font-semibold">Date:</span> {currentDate}</p>
                   <p><span className="font-semibold">Order No:</span> {order.order_code}</p>
                   <p><span className="font-semibold">Order Date:</span> {order.order_date}</p>
@@ -546,6 +587,14 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
               </div>
             </div>
           </div>
+          
+          {/* Invoice Number Dialog */}
+          <InvoiceNumberDialog
+            isOpen={showInvoiceNumberDialog}
+            onClose={() => setShowInvoiceNumberDialog(false)}
+            onSave={handleInvoiceNumberSave}
+            initialValue={localInvoiceNumber}
+          />
         </div>
       </div>
     </div>

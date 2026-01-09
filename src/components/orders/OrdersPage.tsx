@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ORDER_STATUSES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
+import { InvoiceNumberDialog } from '../invoice/InvoiceNumberDialog';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   clients: {
@@ -44,6 +45,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
       sale_price: number | null;
       hsn_code: string;
       gst: number | null;
+      pack_type: string | null;
     };
     product_prices?: {
       id: string;
@@ -63,6 +65,9 @@ export function OrdersPage() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [showInvoiceNumberDialog, setShowInvoiceNumberDialog] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isStaff, isAdmin, user, profile } = useAuth();
@@ -316,12 +321,22 @@ export function OrdersPage() {
     }
 
     setSelectedOrderForInvoice(order);
-    setIsInvoiceOpen(true);
+    setInvoiceNumber('');
+    setShowInvoiceNumberDialog(true);
   };
 
   const handleInvoiceClose = () => {
     setIsInvoiceOpen(false);
     setSelectedOrderForInvoice(null);
+    setInvoiceNumber('');
+    setShowInvoice(false);
+  };
+
+  const handleInvoiceNumberSave = (number: string) => {
+    setInvoiceNumber(number);
+    setShowInvoiceNumberDialog(false);
+    setShowInvoice(true);
+    setIsInvoiceOpen(true);
   };
 
   const handleDialogSuccess = () => {
@@ -415,8 +430,18 @@ export function OrdersPage() {
           order={selectedOrderForInvoice}
           isOpen={isInvoiceOpen}
           onClose={handleInvoiceClose}
+          invoiceNumber={invoiceNumber}
+          onInvoiceNumberChange={setInvoiceNumber}
         />
       )}
+
+      {/* Invoice Number Dialog */}
+      <InvoiceNumberDialog
+        isOpen={showInvoiceNumberDialog}
+        onClose={() => setShowInvoiceNumberDialog(false)}
+        onSave={handleInvoiceNumberSave}
+        initialValue={invoiceNumber}
+      />
     </div>
   );
 } 
