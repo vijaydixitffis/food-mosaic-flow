@@ -183,7 +183,7 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
         <div>
           <h3 className="text-lg font-semibold">Company Parameters</h3>
           <p className="text-sm text-gray-600">
-            Additional company information for invoices and documents
+            Additional company information for invoices and documents.
           </p>
         </div>
         {isEditing && (
