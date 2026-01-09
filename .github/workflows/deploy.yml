@@ -1,61 +1,55 @@
-name: Build and Deploy
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-
-    - name: Install dependencies
-      run: npm ci
-      
-   - name: Set Supabase env (DEMO)
+      - name: Set Supabase env (DEMO)
         if: ${{ vars.IS_DEMO == 'true' }}
         run: |
           echo "VITE_SUPABASE_URL=${{ secrets.DEMO_VITE_SUPABASE_URL }}" >> $GITHUB_ENV
           echo "VITE_SUPABASE_KEY=${{ secrets.DEMO_VITE_SUPABASE_KEY }}" >> $GITHUB_ENV
 
-    - name: Set Supabase env (PROD)
+      - name: Set Supabase env (PROD)
         if: ${{ vars.IS_DEMO != 'true' }}
         run: |
           echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
           echo "VITE_SUPABASE_KEY=${{ secrets.VITE_SUPABASE_KEY }}" >> $GITHUB_ENV
-          
-    - name: Build
-      run: npm run build
 
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: './dist'
+      - name: Clean dependencies
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Install dependencies
+        run: npm install
 
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git checkout --orphan gh-pages
+          git rm -rf .
+          cp -r dist/* .
+          git add .
+          git commit -m "Deploy to GitHub Pages"
+          git push origin gh-pages --force
