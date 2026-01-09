@@ -37,6 +37,26 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
     refetchOnMount: true, // Always refetch when component mounts
   });
 
+  // Fetch FSSAI number from company_params for invoice variant
+  const { data: fssaiParam } = useQuery({
+    queryKey: ['company-params', 'fssai_number'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_params')
+        .select('value')
+        .eq('key', 'fssai_number')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching FSSAI number:', error);
+        return null;
+      }
+
+      return data?.value || null;
+    },
+    enabled: variant === 'invoice', // Only fetch when invoice variant
+  });
+
   // Auto-refetch when invoice variant is rendered to ensure fresh data
   React.useEffect(() => {
     if (variant === 'invoice') {
@@ -111,7 +131,7 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
     console.log('CompanyInfo: Invoice variant settings:', {
       company_name: settings.company_name,
       address: settings.address,
-      registration_number: settings.registration_number,
+      fssai_number: fssaiParam,
       gst_number: settings.gst_number,
       contact_number: settings.contact_number,
       email: settings.email,
@@ -133,32 +153,33 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 text-sm border-t pt-3">
-          {settings.registration_number && (
-            <div>
-              <span className="font-semibold text-gray-700">Registration Number:</span>
-              <span className="ml-2 text-gray-600">{settings.registration_number}</span>
-            </div>
-          )}
-          {settings.gst_number && (
-            <div>
-              <span className="font-semibold text-gray-700">GST Number:</span>
-              <span className="ml-2 text-gray-600">{settings.gst_number}</span>
-            </div>
-          )}
-          {settings.contact_number && (
-            <div>
-              <span className="font-semibold text-gray-700">Contact Number:</span>
-              <span className="ml-2 text-gray-600">{settings.contact_number}</span>
-            </div>
-          )}
-          {settings.email && (
-            <div>
-              <span className="font-semibold text-gray-700">Email:</span>
-              <span className="ml-2 text-gray-600">{settings.email}</span>
-            </div>
-          )}
-        </div>
+// Add this to your CompanyInfo.tsx file
+<div className="grid grid-cols-2 gap-4 text-sm border-t pt-3" style={{ display: 'grid' }}>
+  {fssaiParam && (
+    <div>
+      <span className="font-semibold text-gray-700">FSSAI Number:</span>
+      <span className="ml-2 text-gray-600">{fssaiParam}</span>
+    </div>
+  )}
+  {settings.gst_number && (
+    <div>
+      <span className="font-semibold text-gray-700">GST Number:</span>
+      <span className="ml-2 text-gray-600">{settings.gst_number}</span>
+    </div>
+  )}
+  {settings.contact_number && (
+    <div>
+      <span className="font-semibold text-gray-700">Contact Number:</span>
+      <span className="ml-2 text-gray-600">{settings.contact_number}</span>
+    </div>
+  )}
+  {settings.email && (
+    <div>
+      <span className="font-semibold text-gray-700">Email:</span>
+      <span className="ml-2 text-gray-600">{settings.email}</span>
+    </div>
+  )}
+</div>
       </div>
     );
   }

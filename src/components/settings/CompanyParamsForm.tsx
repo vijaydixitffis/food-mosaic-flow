@@ -51,7 +51,7 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
       const promises = updatedParams.map(param =>
         supabase
           .from('company_params')
-          .update({ key: param.key, value: param.value, flag: param.flag })
+          .update({ value: param.value, flag: param.flag })
           .eq('id', param.id)
           .select()
       );
@@ -221,8 +221,9 @@ export function CompanyParamsForm({ isEditing }: CompanyParamsFormProps) {
                     id={`key-${param.id}`}
                     value={param.key}
                     onChange={(e) => handleParamChange(param.id, 'key', e.target.value)}
-                    disabled={!isEditing}
+                    disabled={true}
                     placeholder="e.g., pan_number"
+                    className="bg-gray-50"
                   />
                 </div>
                 <div className="md:col-span-6">

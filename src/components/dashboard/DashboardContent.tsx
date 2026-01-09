@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { IngredientsPage } from '@/components/ingredients/IngredientsPage';
 import { CompoundsPage } from '@/components/compounds/CompoundsPage';
 import { ProductsPage } from '@/components/products/ProductsPage';
@@ -11,6 +12,8 @@ import { InvoicesPage } from '@/components/invoice/InvoicesPage';
 import { CompanySettingsPage } from '@/components/settings/CompanySettingsPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Carrot, 
   Beaker, 
@@ -36,6 +39,80 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ currentView, onViewChange }: DashboardContentProps) {
+  // Fetch counts from database
+  const { data: ingredientsCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'ingredients'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('ingredients')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: compoundsCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'compounds'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('compounds')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: productsCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'products'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: recipesCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'recipes'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('recipes')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: clientsCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'clients'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: ordersCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'orders'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: workOrdersCount = 0 } = useQuery({
+    queryKey: ['dashboard-count', 'work_orders'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('work_orders')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  // Invoices count is the same as orders count (since invoices are generated from orders)
+  const invoicesCount = ordersCount;
+
   const renderContent = () => {
     switch (currentView) {
       case 'ingredients':
@@ -83,6 +160,90 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
           </p>
         </div>
 
+        {/* Quick Actions Section */}
+        <TooltipProvider>
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-6 mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-4 cursor-pointer"
+                    onClick={() => onViewChange('orders')}
+                  >
+                    <CardContent className="p-0 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <ShoppingCart className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base">New Order</h4>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create a new client order with products and quantities</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-4 cursor-pointer"
+                    onClick={() => onViewChange('work-orders')}
+                  >
+                    <CardContent className="p-0 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <ClipboardList className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base">New Work Order</h4>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Start a production work order with product specifications</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-4 cursor-pointer"
+                    onClick={() => onViewChange('reports')}
+                  >
+                    <CardContent className="p-0 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <ChartColumn className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base">View Reports</h4>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Access analytics and insights for business decisions</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card 
+                    className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-4 cursor-pointer"
+                    onClick={() => onViewChange('clients')}
+                  >
+                    <CardContent className="p-0 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <UserPlus className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 text-base">Add Client</h4>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Register a new client with complete business details</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </TooltipProvider>
+
         {/* Main Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
           {/* Ingredients Card */}
@@ -92,7 +253,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
                   <Carrot className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-orange-500">248</span>
+                <span className="text-3xl font-bold text-orange-500">{ingredientsCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Ingredients</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -115,7 +276,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
                   <Layers className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-green-500">86</span>
+                <span className="text-3xl font-bold text-green-500">{compoundsCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Compounds</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -138,7 +299,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <Package className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-amber-500">142</span>
+                <span className="text-3xl font-bold text-amber-500">{productsCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Products</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -161,7 +322,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <BookOpen className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-orange-500">64</span>
+                <span className="text-3xl font-bold text-orange-500">{recipesCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Recipes</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -184,7 +345,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <Users className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-green-500">28</span>
+                <span className="text-3xl font-bold text-green-500">{clientsCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Clients</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -207,7 +368,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <ShoppingCart className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-amber-500">45</span>
+                <span className="text-3xl font-bold text-amber-500">{ordersCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Orders</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -230,7 +391,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-green-600 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
                   <Factory className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-green-600">15</span>
+                <span className="text-3xl font-bold text-green-600">{workOrdersCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Work Orders</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -253,7 +414,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <IndianRupee className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-purple-500">32</span>
+                <span className="text-3xl font-bold text-purple-500">{invoicesCount}</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Invoices</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -291,52 +452,6 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
               </Button>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Quick Actions Section */}
-        <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-6">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-                  <Plus className="w-6 h-6 text-green-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2 text-lg">Add Recipe</h4>
-                <p className="text-sm text-slate-600">Create a new production recipe with detailed instructions</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-6">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
-                  <ClipboardList className="w-6 h-6 text-orange-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2 text-lg">New Work Order</h4>
-                <p className="text-sm text-slate-600">Start a production work order with product specifications</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-6">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mb-4">
-                  <ChartColumn className="w-6 h-6 text-amber-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2 text-lg">View Reports</h4>
-                <p className="text-sm text-slate-600">Access analytics and insights for business decisions</p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl text-card-foreground bg-white shadow-md border-0 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-6">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-                  <UserPlus className="w-6 h-6 text-green-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2 text-lg">Add Client</h4>
-                <p className="text-sm text-slate-600">Register a new client with complete business details</p>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     );

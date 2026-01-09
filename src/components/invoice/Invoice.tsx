@@ -470,23 +470,54 @@ export function Invoice({ order, isOpen, onClose }: InvoiceProps) {
             })()}
 
             {/* Terms and Conditions */}
-            <div className="mb-8">
-              <h3 className="text-base font-semibold text-gray-900 mb-2">Terms & Conditions:</h3>
-              <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                {(() => {
-                  const termsParam = getParamByKeywords('terms_conditions');
-                  return termsParam ? (
-                    termsParam.value.replace(/\\n/g, '\n')
-                  ) : (
-                    `1. Payment is due within 30 days of invoice date.
-2. Goods once sold will not be taken back.
-3. Interest will be charged on overdue payments.
-4. All disputes are subject to local jurisdiction.
-5. Delivery will be made as per agreed schedule.`
-                  );
-                })()}
-              </div>
-            </div>
+{(() => {
+  const termsParam = getParamByKeywords('terms_and_conditions');
+  if (!termsParam || !termsParam.value) return null;
+  
+  // Process the text to handle both bullet points and newlines
+  const processText = (text: string) => {
+    // First, split by lines
+    const lines = text
+      .replace(/\\n/g, '\n')  // Replace literal \n
+      .replace(/\\r\\n/g, '\n')  // Replace literal \r\n
+      .replace(/\\r/g, '\n')  // Replace literal \r
+      .replace(/\r\n/g, '\n')  // Windows line endings
+      .replace(/\r/g, '\n')  // Mac line endings
+      .split('\n');  // Split into lines
+
+    return lines.map((line, index) => {
+      // Check for bullet points (lines starting with - or *)
+      if (/^[\s]*[-*•]/.test(line)) {
+        return (
+          <div key={index} className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>{line.replace(/^[\s]*[-*•]\s*/, '')}</span>
+          </div>
+        );
+      }
+      // Check for numbered lists (lines starting with 1., 2., etc.)
+      else if (/^[\s]*\d+\./.test(line)) {
+        return (
+          <div key={index} className="flex items-start">
+            <span className="mr-2">{line.match(/^[\s]*\d+\./)?.[0]}</span>
+            <span>{line.replace(/^[\s]*\d+\.\s*/, '')}</span>
+          </div>
+        );
+      }
+      // Regular line with text
+      return <div key={index} className={index > 0 ? 'mt-2' : ''}>{line}</div>;
+    });
+  };
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-base font-semibold text-gray-900 mb-2">Terms & Conditions:</h3>
+      <div className="text-sm text-gray-600 space-y-1">
+        {processText(termsParam.value)}
+      </div>
+    </div>
+  );
+})()}
 
             {/* Footer */}
             <div className="flex justify-between items-end">
