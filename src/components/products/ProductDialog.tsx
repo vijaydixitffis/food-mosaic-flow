@@ -59,15 +59,11 @@ type ProductWithIngredients = Product & {
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  hsn_code: z.string().min(1, 'HSN code is required'),
   description: z.string().optional(),
   pack_type: z.string().optional(),
   client_note: z.string().optional(),
   remarks: z.string().optional(),
-  sale_price: z.string().optional(),
-  gst: z.string().refine(val => val === '' || (!isNaN(Number(val)) && Number(val) >= 0 && Number(val) < 100), {
-    message: 'GST must be between 0 and 99.99',
-  }),
+  tags: z.array(z.string()).optional(),
 });
 
 interface ProductDialogProps {
@@ -106,21 +102,36 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
   const [showStockHistory, setShowStockHistory] = useState(false);
   const [addStockQty, setAddStockQty] = useState('');
   const [addStockLoading, setAddStockLoading] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  
+  console.log('ProductDialog render - product exists:', !!product);
+  console.log('ProductDialog render - product.id:', product?.id);
+  console.log('ProductDialog render - showAddStock:', showAddStock);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch categories for stock addition
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sequence', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
-      hsn_code: '',
       description: '',
       pack_type: '',
       client_note: '',
       remarks: '',
-      sale_price: '',
-      gst: '',
     },
   });
 
@@ -185,13 +196,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
     if (product) {
       form.reset({
         name: product.name,
-        hsn_code: product.hsn_code || '',
         description: product.description || '',
         pack_type: product.pack_type || '',
         client_note: product.client_note || '',
         remarks: product.remarks || '',
-        sale_price: product.sale_price?.toString() || '',
-        gst: product.gst?.toString() || '',
       });
       setTags(product.tags || []);
       
@@ -216,13 +224,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
     } else {
       form.reset({
         name: '',
-        hsn_code: '',
         description: '',
         pack_type: '',
         client_note: '',
         remarks: '',
-        sale_price: '',
-        gst: '',
       });
       setTags([]);
       setProductIngredients([]);
@@ -243,13 +248,10 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
       
       const productData = {
         name: formData.name,
-        hsn_code: formData.hsn_code,
         description: formData.description || null,
         pack_type: formData.pack_type || null,
         client_note: formData.client_note || null,
         remarks: formData.remarks || null,
-        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
-        gst: formData.gst ? parseFloat(formData.gst) : null,
         tags: currentTags.length > 0 ? currentTags : null,
         active: true,
       };
@@ -475,21 +477,67 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
 
   // Stock management functions
   const handleAddStock = async (e?: React.FormEvent) => {
+    console.log('handleAddStock called!');
     e?.preventDefault();
-    if (!product?.id || !addStockQty) return;
+    if (!product?.id || !addStockQty || !selectedCategoryId) {
+      console.log('Early return - missing data:', { 
+        hasProductId: !!product?.id, 
+        hasQuantity: !!addStockQty, 
+        hasCategoryId: !!selectedCategoryId 
+      });
+      return;
+    }
     setAddStockLoading(true);
+    
+    // DEBUG: Check database state before adding stock
+    console.log('=== DEBUGGING BEFORE ADDING STOCK ===');
+    console.log('Product ID:', product.id);
+    console.log('Category ID:', selectedCategoryId);
+    console.log('Quantity:', addStockQty);
+    
     try {
+      const { data: checkProductPrice } = await supabase
+        .from('product_prices')
+        .select('*')
+        .eq('product_id', product.id)
+        .eq('category_id', selectedCategoryId);
+        
+      console.log('Product price check result:', checkProductPrice);
+      
+      const { data: allProductPrices } = await supabase
+        .from('product_prices')
+        .select('*')
+        .eq('product_id', product.id);
+        
+      console.log('All product prices for this product:', allProductPrices);
+      
+      const { data: checkStockAllocation } = await supabase
+        .from('stock_allocation')
+        .select('*')
+        .eq('stock_type', 'PRODUCT')
+        .limit(5);
+        
+      console.log('Sample stock allocations:', checkStockAllocation);
+      
       await addProductStock({
         product_id: product.id,
+        category_id: selectedCategoryId,
         quantity: parseFloat(addStockQty),
       });
       toast({ title: 'Success', description: 'Stock added successfully.' });
       setAddStockQty('');
+      setSelectedCategoryId('');
       setShowAddStock(false);
       // Only invalidate the product query, not the whole list
       queryClient.invalidateQueries({ queryKey: ['product', product.id] });
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to add stock', variant: 'destructive' });
+      console.error('Error adding stock:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add stock';
+      toast({ 
+        title: 'Error', 
+        description: errorMessage, 
+        variant: 'destructive' 
+      });
     } finally {
       setAddStockLoading(false);
     }
@@ -625,23 +673,46 @@ export function ProductDialog({ isOpen, onClose, product, onSuccess, isReadOnly 
 
                     {/* Add Stock Form */}
                     {showAddStock && (
-                      <form onSubmit={handleAddStock} className="flex gap-2 items-end">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Quantity to Add</label>
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={addStockQty}
-                            onChange={e => setAddStockQty(e.target.value)}
-                            placeholder="Enter quantity"
-                            required
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+                      <form onSubmit={handleAddStock} className="space-y-3">
+                        <div className="flex gap-2 items-end">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Quantity to Add</label>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={addStockQty}
+                              onChange={e => setAddStockQty(e.target.value)}
+                              placeholder="Enter quantity"
+                              required
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Category</label>
+                            <select
+                              value={selectedCategoryId}
+                              onChange={e => setSelectedCategoryId(e.target.value)}
+                              required
+                              className="w-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select category</option>
+                              {categories.map((category: any) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <Button 
+                            type="submit" 
+                            size="sm" 
+                            disabled={addStockLoading}
+                            onClick={() => console.log('Add Stock button clicked!')}
+                          >
+                            {addStockLoading ? 'Adding...' : 'Add'}
+                          </Button>
                         </div>
-                        <Button type="button" size="sm" disabled={addStockLoading} onClick={handleAddStock}>
-                          {addStockLoading ? 'Adding...' : 'Add'}
-                        </Button>
                       </form>
                     )}
                   </div>

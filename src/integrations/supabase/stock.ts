@@ -117,50 +117,74 @@ export async function addIngredientStock(data: {
  */
 export async function addProductStock(data: {
   product_id: string;
+  category_id: string;
   quantity: number;
   reference_id?: string;
 }) {
-  // First get the current stock
-  const { data: currentProduct, error: fetchError } = await supabase
-    .from('products')
-    .select('current_stock')
-    .eq('id', data.product_id)
+  console.log('addProductStock called with:', data);
+  
+  // First get the product_prices record to validate the combination
+  const { data: productPrice, error: fetchError } = await supabase
+    .from('product_prices')
+    .select('id, stock, sale_price')
+    .eq('product_id', data.product_id)
+    .eq('category_id', data.category_id)
     .single();
 
+  console.log('Product price query result:', { productPrice, fetchError });
+
   if (fetchError) {
-    console.error('Error fetching current product stock:', fetchError);
+    console.error('Error fetching product price record:', fetchError);
     return { data: null, error: fetchError };
   }
 
+  if (!productPrice) {
+    console.error('No product price record found for product_id and category_id combination');
+    return { 
+      data: null, 
+      error: new Error('No price configuration found for this product and category. Please set up product prices first using the Price dialog.') 
+    };
+  }
+
   // Calculate new stock
-  const currentStock = currentProduct?.current_stock || 0;
+  const currentStock = productPrice?.stock || 0;
   const newStock = currentStock + data.quantity;
 
-  // Update product current_stock
-  const { data: updatedProduct, error: updateError } = await supabase
-    .from('products')
-    .update({ current_stock: newStock })
-    .eq('id', data.product_id)
+  // Update product_prices stock
+  const { data: updatedProductPrice, error: updateError } = await supabase
+    .from('product_prices')
+    .update({ stock: newStock })
+    .eq('id', productPrice.id)
     .select()
     .single();
 
   if (updateError) {
-    console.error('Error updating product stock:', updateError);
+    console.error('Error updating product price stock:', updateError);
     return { data: null, error: updateError };
   }
 
-  // Create INWARD stock allocation record
+  // Create INWARD stock allocation record using product_prices.id as stock_item_id
+  console.log('Creating stock allocation with:', {
+    stock_entry_type: 'INWARD',
+    stock_type: 'PRODUCT',
+    stock_item_id: productPrice.id,
+    reference_id: data.reference_id || null,
+    quantity_allocated: data.quantity
+  });
+
   const { data: allocationData, error: allocationError } = await supabase
     .from('stock_allocation')
     .insert([{
       stock_entry_type: 'INWARD',
       stock_type: 'PRODUCT',
-      stock_item_id: data.product_id,
+      stock_item_id: productPrice.id, // Using product_prices primary key
       reference_id: data.reference_id || null,
       quantity_allocated: data.quantity
     }])
     .select()
     .single() as { data: StockAllocation | null; error: any };
+
+  console.log('Stock allocation result:', { allocationData, allocationError });
 
   if (allocationError) {
     console.error('Error creating product stock allocation record:', allocationError);
@@ -170,7 +194,7 @@ export async function addProductStock(data: {
 
   console.log('Product stock allocation created successfully:', allocationData);
 
-  return { data: updatedProduct, error: null };
+  return { data: updatedProductPrice, error: null };
 }
 
 /**
@@ -178,33 +202,39 @@ export async function addProductStock(data: {
  * @param data - The allocation data (productId, orderId, quantity).
  * @returns The result of the operation or an error.
  */
-export async function allocateProductStock(data: { productId: string; orderId: string; quantity: number }) {
-  const { productId, orderId, quantity } = data;
+export async function allocateProductStock(data: { 
+  productId: string; 
+  categoryId: string;
+  orderId: string; 
+  quantity: number 
+}) {
+  const { productId, categoryId, orderId, quantity } = data;
 
   try {
-    // 1. Check if product has sufficient stock
-    const { data: product, error: productError } = await supabase
-      .from('products')
-      .select('current_stock')
-      .eq('id', productId)
+    // 1. Get the product_prices record to validate combination and check stock
+    const { data: productPrice, error: productPriceError } = await supabase
+      .from('product_prices')
+      .select('id, stock, sale_price')
+      .eq('product_id', productId)
+      .eq('category_id', categoryId)
       .single();
 
-    if (productError || !product) {
-      console.error('Error finding product:', productError);
-      throw new Error('Product not found or error fetching.');
+    if (productPriceError || !productPrice) {
+      console.error('Error finding product price record:', productPriceError);
+      throw new Error('Product and category combination not found or error fetching.');
     }
 
-    if ((product.current_stock || 0) < quantity) {
+    if ((productPrice.stock || 0) < quantity) {
       throw new Error('Insufficient product stock for allocation.');
     }
 
-    // 2. Create OUTWARD stock allocation record
+    // 2. Create OUTWARD stock allocation record using product_prices.id as stock_item_id
     const { data: allocation, error: allocationError } = await supabase
       .from('stock_allocation')
       .insert([{
         stock_entry_type: 'OUTWARD',
         stock_type: 'PRODUCT',
-        stock_item_id: productId,
+        stock_item_id: productPrice.id, // Using product_prices primary key
         reference_id: orderId,
         quantity_allocated: quantity
       }])
@@ -216,15 +246,15 @@ export async function allocateProductStock(data: { productId: string; orderId: s
       throw allocationError;
     }
 
-    // 3. Update product current_stock (reduce by allocated quantity)
-    const newStock = (product.current_stock || 0) - quantity;
+    // 3. Update product_prices stock (reduce by allocated quantity)
+    const newStock = (productPrice.stock || 0) - quantity;
     const { error: updateError } = await supabase
-      .from('products')
-      .update({ current_stock: newStock })
-      .eq('id', productId);
+      .from('product_prices')
+      .update({ stock: newStock })
+      .eq('id', productPrice.id);
 
     if (updateError) {
-      console.error('Error updating product stock after allocation:', updateError);
+      console.error('Error updating product price stock after allocation:', updateError);
       throw updateError;
     }
 

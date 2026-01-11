@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -226,18 +226,8 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     enabled: !!order?.id, // Only fetch if order exists
   });
 
-  // Extract data from responses
-  const orderStockAllocations = orderStockAllocationsResponse?.data || [];
-
-  // Wrapper function for allocateMutation to match expected signature
-  const handleAllocateStock = (productId: string, allocatedQuantity: number) => {
-    allocateMutation.mutate({ productId, quantity: allocatedQuantity });
-  };
-
-  // Combine order products with stock and allocation data
-  const productsWithStockAndAllocation = React.useMemo(() => {
-    if (!formData.products || !orderStockAllocations) return [];
-
+  const productsWithStockAndAllocation = useMemo(() => {
+    const orderStockAllocations = orderStockAllocationsResponse?.data || [];
     return formData.products.map(orderProduct => {
       const allocatedQuantity = orderStockAllocations
         .filter(allocation => allocation.stock_item_id === orderProduct.product_id)
@@ -249,7 +239,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         allocatedQuantity: allocatedQuantity,
       };
     });
-  }, [formData.products, orderStockAllocations]);
+  }, [formData.products, orderStockAllocationsResponse?.data]);
 
   // --- Handle Product Stock Allocation ---
   const allocateMutation = useMutation({
@@ -257,7 +247,15 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
       if (!order?.id) {
         throw new Error('Cannot allocate stock without an order ID.');
       }
-      await allocateProductStock({ productId, orderId: order.id, quantity });
+      if (!formData.category?.id) {
+        throw new Error('Cannot allocate stock without an order category.');
+      }
+      await allocateProductStock({ 
+        productId, 
+        categoryId: formData.category.id, 
+        orderId: order.id, 
+        quantity 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -274,6 +272,16 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         variant: 'destructive',
       });
     }});
+
+  const handleAllocateStock = (productId: string, quantity: number) => {
+    console.log('=== PARENT ALLOCATE STOCK DEBUG ===');
+    console.log('ProductId:', productId);
+    console.log('Quantity:', quantity);
+    console.log('Order ID:', order?.id);
+    console.log('Form category:', formData.category);
+    
+    allocateMutation.mutate({ productId, quantity });
+  };
 
   const addProductItem = () => {
     if (!selectedProductId || !selectedPouchSize || !numberOfPouches) {

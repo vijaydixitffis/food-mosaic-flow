@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { addProductStock } from '@/integrations/supabase/stock';
 
 const stockFormSchema = z.object({
   // Form schema can be extended if needed
@@ -131,10 +132,11 @@ export function ProductStockDialog({
       const updates = categoryStocks
         .filter(item => item.stock_to_add !== 0)
         .map(async (item) => {
-          const { error } = await supabase.rpc('update_product_stock', {
-            p_product_id: product.id,
-            p_category_id: item.category_id,
-            p_stock_change: item.stock_to_add,
+          // Use addProductStock to create stock allocation entries
+          const { error } = await addProductStock({
+            product_id: product.id,
+            category_id: item.category_id,
+            quantity: item.stock_to_add,
           });
           if (error) throw error;
         });
@@ -143,7 +145,7 @@ export function ProductStockDialog({
 
       toast({
         title: 'Success',
-        description: 'Stock updated successfully',
+        description: 'Stock updated successfully with audit trail',
       });
       onSuccess();
       onClose();

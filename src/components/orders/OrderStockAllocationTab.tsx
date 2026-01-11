@@ -50,7 +50,14 @@ export function OrderStockAllocationTab({
   };
 
   const handleAllocateClick = (product: ProductWithStockAndAllocation) => {
+    console.log('=== ALLOCATE CLICK DEBUG ===');
+    console.log('Product:', product);
+    console.log('OrderId:', orderId);
+    console.log('Allocation quantities:', allocationQuantities);
+    console.log('Quantity to allocate:', allocationQuantities[product.product_id] || 0);
+    
     if (!orderId) {
+      console.log('ERROR: Order ID missing');
       toast({
         title: 'Error',
         description: 'Order ID is missing for allocation.',
@@ -60,8 +67,10 @@ export function OrderStockAllocationTab({
     }
 
     const quantityToAllocate = allocationQuantities[product.product_id] || 0;
+    console.log('Final quantity to allocate:', quantityToAllocate);
 
     if (quantityToAllocate <= 0) {
+      console.log('ERROR: Quantity <= 0');
       toast({
         title: 'Validation Error',
         description: 'Please enter a quantity greater than 0.',
@@ -71,6 +80,7 @@ export function OrderStockAllocationTab({
     }
 
     if (product.stock !== null && quantityToAllocate > product.stock) {
+      console.log('ERROR: Quantity exceeds stock');
       toast({
         title: 'Validation Error',
         description: `Allocated quantity for ${product.product_name} exceeds available stock (${product.stock}).`,
@@ -79,6 +89,7 @@ export function OrderStockAllocationTab({
       return;
     }
 
+    console.log('About to clear input and call onAllocateStock');
     // Clear the input field after allocation
     setAllocationQuantities({
         ...allocationQuantities,
@@ -86,6 +97,7 @@ export function OrderStockAllocationTab({
       });
 
 
+    console.log('Calling onAllocateStock with:', product.product_id, quantityToAllocate);
     onAllocateStock(product.product_id, quantityToAllocate);
   };
 
