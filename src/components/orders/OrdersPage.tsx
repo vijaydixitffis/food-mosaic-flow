@@ -198,11 +198,17 @@ export function OrdersPage() {
               priceMap.get(price.product_id)!.push(price);
             });
 
-            // Add product_prices to each order product
-            const orderProducts = order.order_products?.map(op => ({
-              ...op,
-              product_prices: priceMap.get(op.product_id)?.[0] || null // For now, take first price
-            })) || [];
+            // Add product_prices to each order product (match with order's category)
+            const orderProducts = order.order_products?.map(op => {
+              // Find the price that matches the order's category_id
+              const matchingPrice = priceMap.get(op.product_id)?.find(
+                price => price.category_id === order.category_id
+              );
+              return {
+                ...op,
+                product_prices: matchingPrice || null
+              };
+            }) || [];
 
             return {
               ...order,

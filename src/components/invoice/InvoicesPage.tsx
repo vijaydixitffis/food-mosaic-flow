@@ -13,6 +13,11 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
+  categories?: {
+    id: string;
+    category_name: string;
+    sequence: number;
+  } | null;
   clients: {
     id: string;
     name: string;
@@ -68,6 +73,11 @@ export function InvoicesPage() {
         .from('orders')
         .select(`
           *,
+          categories (
+            id,
+            category_name,
+            sequence
+          ),
           clients (
             id,
             name,
@@ -126,11 +136,17 @@ export function InvoicesPage() {
             priceMap.get(price.product_id)!.push(price);
           });
 
-          // Add product_prices to each order product (all available category prices)
-          const orderProducts = order.order_products?.map(op => ({
-            ...op,
-            product_prices: priceMap.get(op.product_id)?.[0] || null // For now, take first price
-          })) || [];
+          // Add product_prices to each order product (match with order's category)
+          const orderProducts = order.order_products?.map(op => {
+            // Find the price that matches the order's category_id
+            const matchingPrice = priceMap.get(op.product_id)?.find(
+              price => price.category_id === order.category_id
+            );
+            return {
+              ...op,
+              product_prices: matchingPrice || null
+            };
+          }) || [];
 
           return {
             ...order,
