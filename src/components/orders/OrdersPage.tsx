@@ -8,11 +8,13 @@ import { OrdersTable } from './OrdersTable';
 import { OrdersDialog } from './OrdersDialog';
 import { OrdersPagination } from './OrdersPagination';
 import { Invoice } from '../invoice/Invoice';
+import { DeliveryChallan } from '../delivery-challan/DeliveryChallan';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ORDER_STATUSES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
 import { InvoiceNumberDialog } from '../invoice/InvoiceNumberDialog';
+import { DeliveryChallanNumberDialog } from '../delivery-challan/DeliveryChallanNumberDialog';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   clients: {
@@ -68,6 +70,13 @@ export function OrdersPage() {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [showInvoiceNumberDialog, setShowInvoiceNumberDialog] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
+  
+  // Delivery Challan state
+  const [isDeliveryChallanOpen, setIsDeliveryChallanOpen] = useState(false);
+  const [selectedOrderForDeliveryChallan, setSelectedOrderForDeliveryChallan] = useState<Order | null>(null);
+  const [deliveryChallanNumber, setDeliveryChallanNumber] = useState('');
+  const [showDeliveryChallanNumberDialog, setShowDeliveryChallanNumberDialog] = useState(false);
+  const [showDeliveryChallan, setShowDeliveryChallan] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isStaff, isAdmin, user, profile } = useAuth();
@@ -306,6 +315,37 @@ export function OrdersPage() {
     toggleOrderStatusMutation.mutate({ orderId, status: newStatus });
   };
 
+  const handleGenerateDeliveryChallan = (order: Order) => {
+    if (isStaff) {
+      toast({
+        title: "Access Restricted",
+        description: "You can only view orders",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if order has products
+    if (!order.order_products || order.order_products.length === 0) {
+      toast({
+        title: "No Products",
+        description: "Cannot generate delivery challan for an order with no products",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedOrderForDeliveryChallan(order);
+    setDeliveryChallanNumber('');
+    setShowDeliveryChallanNumberDialog(true);
+  };
+
+  const handleDeliveryChallanClose = () => {
+    setIsDeliveryChallanOpen(false);
+    setSelectedOrderForDeliveryChallan(null);
+    setDeliveryChallanNumber('');
+  };
+
   const handleGenerateInvoice = (order: Order) => {
     if (isStaff) {
       toast({
@@ -343,6 +383,13 @@ export function OrdersPage() {
     setShowInvoiceNumberDialog(false);
     setShowInvoice(true);
     setIsInvoiceOpen(true);
+  };
+
+  const handleDeliveryChallanNumberSave = (number: string) => {
+    setDeliveryChallanNumber(number);
+    setShowDeliveryChallanNumberDialog(false);
+    setShowDeliveryChallan(true);
+    setIsDeliveryChallanOpen(true);
   };
 
   const handleDialogSuccess = () => {
@@ -407,7 +454,9 @@ export function OrdersPage() {
           onEdit={handleEditOrder}
           onToggleStatus={handleToggleOrderStatus}
           onGenerateInvoice={handleGenerateInvoice}
-          isReadOnly={isStaff}
+          onGenerateDeliveryChallan={handleGenerateDeliveryChallan}
+          isReadOnly={isReadOnly}
+          isStaff={isStaff}
         />
       </div>
 
@@ -447,6 +496,25 @@ export function OrdersPage() {
         onClose={() => setShowInvoiceNumberDialog(false)}
         onSave={handleInvoiceNumberSave}
         initialValue={invoiceNumber}
+      />
+
+      {/* Delivery Challan Dialog */}
+      {selectedOrderForDeliveryChallan && (
+        <DeliveryChallan
+          order={selectedOrderForDeliveryChallan}
+          isOpen={isDeliveryChallanOpen}
+          onClose={handleDeliveryChallanClose}
+          deliveryChallanNumber={deliveryChallanNumber}
+          onDeliveryChallanNumberChange={setDeliveryChallanNumber}
+        />
+      )}
+
+      {/* Delivery Challan Number Dialog */}
+      <DeliveryChallanNumberDialog
+        isOpen={showDeliveryChallanNumberDialog}
+        onClose={() => setShowDeliveryChallanNumberDialog(false)}
+        onSave={handleDeliveryChallanNumberSave}
+        initialValue={deliveryChallanNumber}
       />
     </div>
   );

@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Eye, FileText } from 'lucide-react';
+import { Edit, Eye, FileText, Truck } from 'lucide-react';
 import { ORDER_STATUSES } from '@/lib/constants';
 
 interface StatusSliderProps {
@@ -10,6 +10,17 @@ interface StatusSliderProps {
   onToggle: () => void;
   orderCode: string;
   disabled?: boolean;
+}
+
+interface OrdersTableProps {
+  orders: any[];
+  isLoading?: boolean;
+  onEdit: (order: any) => void;
+  onToggleStatus: (orderId: string, currentStatus: string) => void;
+  onGenerateInvoice: (order: any) => void;
+  onGenerateDeliveryChallan: (order: any) => void;
+  isReadOnly?: boolean;
+  isStaff?: boolean;
 }
 
 function StatusSlider({ isActive, onToggle, orderCode, disabled = false }: StatusSliderProps) {
@@ -55,8 +66,24 @@ function StatusSlider({ isActive, onToggle, orderCode, disabled = false }: Statu
   );
 }
 
-export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleStatus, onGenerateInvoice, isReadOnly }) {
-  if (isLoading) {
+export function OrdersTable({ 
+  orders, 
+  onEdit, 
+  onToggleStatus, 
+  onGenerateInvoice,
+  onGenerateDeliveryChallan,
+  isReadOnly = false, 
+  isStaff = false 
+}: OrdersTableProps) {
+  if (orders.length === 0) {
+    return (
+      <div className="rounded-md border p-4">
+        <p className="text-center text-gray-500">No orders found.</p>
+      </div>
+    );
+  }
+
+  if (isReadOnly) {
     return (
       <div className="rounded-md border p-4">
         <p className="text-center text-gray-500">Loading orders...</p>
@@ -116,16 +143,28 @@ export function OrdersTable({ orders = [], isLoading = false, onEdit, onToggleSt
                         {isReadOnly ? 'View' : 'Edit'}
                       </Button>
                       {!isReadOnly && order.order_products && order.order_products.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onGenerateInvoice(order)}
-                          className="flex items-center gap-1"
-                          title="Generate Invoice"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Invoice
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onGenerateDeliveryChallan(order)}
+                            className="flex items-center gap-1"
+                            title="Generate Delivery Challan"
+                          >
+                            <Truck className="w-3 h-3" />
+                            Delivery Challan
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onGenerateInvoice(order)}
+                            className="flex items-center gap-1"
+                            title="Generate Invoice"
+                          >
+                            <FileText className="w-3 h-3" />
+                            Invoice
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>

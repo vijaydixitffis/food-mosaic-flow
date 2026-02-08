@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CompanyLogo } from './CompanyLogo';
 
 interface CompanyInfoProps {
-  variant?: 'compact' | 'full' | 'invoice';
+  variant?: 'compact' | 'full' | 'invoice' | 'delivery-challan';
   className?: string;
 }
 
@@ -54,13 +54,13 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
 
       return data?.value || null;
     },
-    enabled: variant === 'invoice', // Only fetch when invoice variant
+    enabled: variant === 'invoice' || variant === 'delivery-challan', // Only fetch when invoice or delivery-challan variant
   });
 
-  // Auto-refetch when invoice variant is rendered to ensure fresh data
+  // Auto-refetch when invoice or delivery-challan variant is rendered to ensure fresh data
   React.useEffect(() => {
-    if (variant === 'invoice') {
-      console.log('CompanyInfo: Invoice variant detected, ensuring fresh data...');
+    if (variant === 'invoice' || variant === 'delivery-challan') {
+      console.log('CompanyInfo: Invoice/Delivery Challan variant detected, ensuring fresh data...');
       refetch();
     }
   }, [variant, refetch]);
@@ -164,6 +164,56 @@ export function CompanyInfo({ variant = 'full', className = '' }: CompanyInfoPro
     <div>
       <span className="font-semibold text-gray-700">GST Number:</span>
       <span className="ml-2 text-gray-600">{settings.gst_number}</span>
+    </div>
+  )}
+  {settings.contact_number && (
+    <div>
+      <span className="font-semibold text-gray-700">Contact Number:</span>
+      <span className="ml-2 text-gray-600">{settings.contact_number}</span>
+    </div>
+  )}
+  {settings.email && (
+    <div>
+      <span className="font-semibold text-gray-700">Email:</span>
+      <span className="ml-2 text-gray-600">{settings.email}</span>
+    </div>
+  )}
+</div>
+      </div>
+    );
+  }
+
+  if (variant === 'delivery-challan') {
+    console.log('CompanyInfo: Rendering delivery-challan variant');
+    console.log('CompanyInfo: Delivery Challan variant settings:', {
+      company_name: settings.company_name,
+      address: settings.address,
+      fssai_number: fssaiParam,
+      contact_number: settings.contact_number,
+      email: settings.email,
+    });
+    
+    return (
+      <div className={`space-y-3 ${className}`}>
+        <div className="flex items-start space-x-3">
+          <CompanyLogo size="lg" showName={false} />
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              {settings.company_name}
+            </h2>
+            {settings.address && (
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {settings.address}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm border-t pt-3" style={{ display: 'grid' }}>
+  {fssaiParam && (
+    <div>
+      <span className="font-semibold text-gray-700">FSSAI Number:</span>
+      <span className="ml-2 text-gray-600">{fssaiParam}</span>
     </div>
   )}
   {settings.contact_number && (
