@@ -126,22 +126,22 @@ export function WorkOrderIngredientsTab({
                 <TableRow key={ingredient.id}>
                   <TableCell className="font-medium">{ingredient.name}</TableCell>
                   <TableCell>
-                    {ingredient.required_quantity} {ingredient.unit_of_measurement}
+                    {ingredient.required_quantity.toFixed(3)} {ingredient.unit_of_measurement}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span>{ingredient.stock} {ingredient.unit_of_measurement}</span>
+                      <span>{ingredient.stock.toFixed(3)} {ingredient.unit_of_measurement}</span>
                       <Badge variant={stockStatus === 'sufficient' ? 'default' : 'destructive'}>
                         {stockStatus === 'sufficient' ? 'Sufficient' : 'Insufficient'}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {allocatedQuantity} {ingredient.unit_of_measurement}
+                    {allocatedQuantity.toFixed(3)} {ingredient.unit_of_measurement}
                   </TableCell>
                   <TableCell>
                     <span className={remainingRequired > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}>
-                      {remainingRequired} {ingredient.unit_of_measurement}
+                      {remainingRequired.toFixed(3)} {ingredient.unit_of_measurement}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -154,7 +154,7 @@ export function WorkOrderIngredientsTab({
                       max={availableForAllocation}
                       step="any"
                       className="w-32"
-                      placeholder={`Max: ${availableForAllocation}`}
+                      placeholder={`Max: ${availableForAllocation.toFixed(3)}`}
                     />
                   </TableCell>
                   <TableCell className="text-right">

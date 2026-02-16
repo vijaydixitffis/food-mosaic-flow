@@ -69,6 +69,15 @@ const convertToKg = (value: number, unit: string): number => {
     : value;
 };
 
+interface CompoundInfo {
+  id: string;
+  name: string;
+  quantities: {
+    [productId: string]: number; // productId -> quantity in kg
+  };
+  total_quantity: number; // in kg
+}
+
 interface IngredientInfo {
   id: string;
   name: string;
@@ -151,10 +160,41 @@ export function WorkOrderInventoryTab({
 
       if (pcError) throw pcError;
 
-      // Initialize ingredient map
+      // Initialize compound and ingredient maps
+      const compoundMap = new Map<string, CompoundInfo>();
       const ingredientMap = new Map<string, IngredientInfo>();
 
-      // Process direct product ingredients
+      // Process compounds first
+      productCompounds?.forEach(pc => {
+        if (!pc.compounds) return;
+        
+        const product = products.find(p => p.id === pc.product_id);
+        if (!product) return;
+
+        const compoundId = pc.compound_id;
+        // Calculate total compound weight: (compound_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
+        // Since product_compounds.quantity is now for 5kg of product, we divide by 5 to get per kg
+        const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
+        const compoundWeightPerKg = (pc.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+        const totalCompoundWeight = compoundWeightPerKg * totalProductWeight;
+        // Convert to kg (assuming compounds are stored in grams like ingredients)
+        const quantityInKg = convertToKg(totalCompoundWeight, 'g');
+        
+        if (!compoundMap.has(compoundId)) {
+          compoundMap.set(compoundId, {
+            id: compoundId,
+            name: pc.compounds.name,
+            quantities: {},
+            total_quantity: 0
+          });
+        }
+        
+        const compound = compoundMap.get(compoundId)!;
+        compound.quantities[product.id] = (compound.quantities[product.id] || 0) + quantityInKg;
+        compound.total_quantity += quantityInKg;
+      });
+
+      // Process direct product ingredients (excluding those that are part of compounds)
       productIngredients?.forEach(pi => {
         if (!pi.ingredients) return;
         
@@ -185,52 +225,20 @@ export function WorkOrderInventoryTab({
         ingredient.total_quantity += quantityInKg;
       });
 
-      // Process compound ingredients
-      productCompounds?.forEach(pc => {
-        if (!pc.compounds || !Array.isArray(pc.compounds.compound_ingredients)) return;
-        
-        const product = products.find(p => p.id === pc.product_id);
-        if (!product) return;
-
-        pc.compounds.compound_ingredients.forEach(ci => {
-          if (!ci.ingredients) return;
-          
-          const ingredientId = ci.ingredient_id;
-          const unit = ci.ingredients.unit_of_measurement || 'kg';
-          // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
-          // Since compound_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
-          const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
-          const ingredientWeightPerKg = (ci.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
-          const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
-          const quantityInKg = convertToKg(totalIngredientWeight, unit);
-          
-          if (!ingredientMap.has(ingredientId)) {
-            ingredientMap.set(ingredientId, {
-              id: ingredientId,
-              name: ci.ingredients.name,
-              unit_of_measurement: 'kg', // Always use kg after conversion
-              quantities: {},
-              total_quantity: 0
-            });
-          }
-          
-          const ingredient = ingredientMap.get(ingredientId)!;
-          ingredient.quantities[product.id] = (ingredient.quantities[product.id] || 0) + quantityInKg;
-          ingredient.total_quantity += quantityInKg;
-        });
-      });
-
-      // Convert map to array and sort by ingredient name
+      // Convert maps to arrays and sort by name
+      const compounds = Array.from(compoundMap.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
       const ingredients = Array.from(ingredientMap.values()).sort((a, b) => 
         a.name.localeCompare(b.name)
       );
 
-      return { products, ingredients };
+      return { products, compounds, ingredients };
     },
     enabled: formData.products.length > 0,
   });
 
-  const { products = [], ingredients = [] } = data || {};
+  const { products = [], compounds = [], ingredients = [] } = data || {};
 
   if (formData.products.length === 0) {
     return (
@@ -261,84 +269,168 @@ export function WorkOrderInventoryTab({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Ingredient Requirements</h3>
-        <p className="text-sm text-gray-600">
-          Total ingredients needed to fulfill this work order based on selected products and their quantities.
-        </p>
-        
-        {isLoading ? (
-          <div className="text-center py-8 text-gray-500">
-            Loading ingredient requirements...
-          </div>
-        ) : ingredients.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No ingredients found for the selected products.
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[200px]">Ingredient</TableHead>
-                  {products.map(product => (
-                    <TableHead key={product.id} className="text-right min-w-[150px]">
+      <div className="space-y-6">
+        {/* Compounds Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Compound Requirements</h3>
+          <p className="text-sm text-gray-600">
+            Compounds needed to fulfill this work order based on selected products and their quantities.
+          </p>
+          
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">
+              Loading compound requirements...
+            </div>
+          ) : compounds.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No compounds found for the selected products.
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Compound</TableHead>
+                    {products.map(product => (
+                      <TableHead key={product.id} className="text-right min-w-[150px]">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{product.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(3)} kg
+                          </span>
+                        </div>
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
                       <div className="flex flex-col">
-                        <span className="font-medium">{product.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(2)} kg
-                        </span>
+                        <span>Total Required</span>
+                        <span className="text-xs text-gray-500">kg</span>
                       </div>
                     </TableHead>
-                  ))}
-                  <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
-                    <div className="flex flex-col">
-                      <span>Total Required</span>
-                      <span className="text-xs text-gray-500">kg</span>
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ingredients.map((ingredient) => (
-                  <TableRow key={ingredient.id}>
-                    <TableCell className="font-medium">
-                      {ingredient.name}
-                    </TableCell>
-                    {products.map(product => (
-                      <TableCell key={`${ingredient.id}-${product.id}`} className="text-right">
-                        {ingredient.quantities[product.id]?.toFixed(2) || '-'}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {compounds.map((compound) => (
+                    <TableRow key={compound.id}>
+                      <TableCell className="font-medium">
+                        {compound.name}
                       </TableCell>
-                    ))}
-                    <TableCell className="text-right font-medium bg-gray-50">
-                      {ingredient.total_quantity.toFixed(2)}
+                      {products.map(product => (
+                        <TableCell key={`${compound.id}-${product.id}`} className="text-right">
+                          {compound.quantities[product.id]?.toFixed(3) || '-'}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right font-medium bg-gray-50">
+                        {compound.total_quantity.toFixed(3)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Compounds Totals row */}
+                  <TableRow className="bg-gray-50">
+                    <TableCell className="font-medium">
+                      <span>Total</span>
+                    </TableCell>
+                    {products.map(product => {
+                      const total = compounds.reduce(
+                        (sum, comp) => sum + (comp.quantities[product.id] || 0), 
+                        0
+                      );
+                      return (
+                        <TableCell key={`total-comp-${product.id}`} className="text-right font-medium">
+                          {total.toFixed(3)}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="text-right font-bold">
+                      {compounds.reduce((sum, comp) => sum + comp.total_quantity, 0).toFixed(3)}
                     </TableCell>
                   </TableRow>
-                ))}
-                {/* Totals row */}
-                <TableRow className="bg-gray-50">
-                  <TableCell className="font-medium">
-                    <span>Total</span>
-                  </TableCell>
-                  {products.map(product => {
-                    const total = ingredients.reduce(
-                      (sum, ing) => sum + (ing.quantities[product.id] || 0), 
-                      0
-                    );
-                    return (
-                      <TableCell key={`total-${product.id}`} className="text-right font-medium">
-                        {total.toFixed(2)}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        {/* Ingredients Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Ingredient Requirements</h3>
+          <p className="text-sm text-gray-600">
+            Direct ingredients needed to fulfill this work order based on selected products and their quantities.
+          </p>
+          
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">
+              Loading ingredient requirements...
+            </div>
+          ) : ingredients.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No direct ingredients found for the selected products.
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Ingredient</TableHead>
+                    {products.map(product => (
+                      <TableHead key={product.id} className="text-right min-w-[150px]">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{product.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(3)} kg
+                          </span>
+                        </div>
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
+                      <div className="flex flex-col">
+                        <span>Total Required</span>
+                        <span className="text-xs text-gray-500">kg</span>
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ingredients.map((ingredient) => (
+                    <TableRow key={ingredient.id}>
+                      <TableCell className="font-medium">
+                        {ingredient.name}
                       </TableCell>
-                    );
-                  })}
-                  <TableCell className="text-right font-bold">
-                    {ingredients.reduce((sum, ing) => sum + ing.total_quantity, 0).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                      {products.map(product => (
+                        <TableCell key={`${ingredient.id}-${product.id}`} className="text-right">
+                          {ingredient.quantities[product.id]?.toFixed(3) || '-'}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right font-medium bg-gray-50">
+                        {ingredient.total_quantity.toFixed(3)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Ingredients Totals row */}
+                  <TableRow className="bg-gray-50">
+                    <TableCell className="font-medium">
+                      <span>Total</span>
+                    </TableCell>
+                    {products.map(product => {
+                      const total = ingredients.reduce(
+                        (sum, ing) => sum + (ing.quantities[product.id] || 0), 
+                        0
+                      );
+                      return (
+                        <TableCell key={`total-ing-${product.id}`} className="text-right font-medium">
+                          {total.toFixed(3)}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="text-right font-bold">
+                      {ingredients.reduce((sum, ing) => sum + ing.total_quantity, 0).toFixed(3)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
       </div>
 
       {!isReadOnly && (

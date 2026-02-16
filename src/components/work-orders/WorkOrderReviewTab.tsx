@@ -7,10 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkOrderFormData } from './WorkOrderDialog';
-import type { Database } from '@/integrations/supabase/types';
 
-type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
-type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
+// Local type definitions since they're not in the generated types
+type WorkOrder = {
+  id: string;
+  name: string;
+  description: string | null;
+  remarks: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type WorkOrderStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type WorkOrderWithProducts = WorkOrder & {
   work_order_products: Array<{
     id: string;
@@ -191,7 +200,7 @@ export function WorkOrderReviewTab({
             
             <div>
               <dt className="text-sm font-medium text-gray-500">Total Weight</dt>
-              <dd className="mt-1 text-2xl font-semibold text-gray-900">{totalWeight.toFixed(2)} kg</dd>
+              <dd className="mt-1 text-2xl font-semibold text-gray-900">{totalWeight.toFixed(3)} kg</dd>
             </div>
 
             <div>
@@ -223,7 +232,7 @@ export function WorkOrderReviewTab({
                       <span className="font-medium">{product.number_of_pouches} pouches</span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      {product.pouch_size.toFixed(2)} kg per pouch
+                      {product.pouch_size.toFixed(3)} kg per pouch
                     </div>
                   </div>
                 </div>

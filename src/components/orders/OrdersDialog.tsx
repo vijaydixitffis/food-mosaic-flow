@@ -226,20 +226,100 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     enabled: !!order?.id, // Only fetch if order exists
   });
 
+  // --- Fetch Product Stocks for Stock Allocation Tab ---
+  const { data: productStocksResponse, isLoading: isLoadingProductStocks } = useQuery({
+    queryKey: ['product-stocks-for-order', formData.products?.map(p => p.product_id), formData.category?.id],
+    queryFn: async () => {
+      console.log('=== PRODUCT STOCKS QUERY DEBUG ===');
+      console.log('formData.products:', formData.products);
+      console.log('formData.category:', formData.category);
+      
+      if (!formData.products || formData.products.length === 0) {
+        console.log('No products found, returning empty array');
+        return [];
+      }
+      
+      if (!formData.category?.id) {
+        console.log('No category found, returning empty array');
+        return [];
+      }
+      
+      const productIds = formData.products.map(p => p.product_id);
+      console.log('Product IDs to fetch:', productIds);
+      console.log('Category ID:', formData.category.id);
+      
+      const { data, error } = await supabase
+        .from('product_prices')
+        .select('id, product_id, stock')  // ADD id field
+        .eq('category_id', formData.category?.id)
+        .in('product_id', productIds);
+      
+      console.log('Product stocks query result:', { data, error });
+      
+      if (error) {
+        console.error('Error fetching product stocks:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: !!(formData.products) && formData.products.length > 0 && !!formData.category?.id,
+  });
+
   const productsWithStockAndAllocation = useMemo(() => {
+    console.log('=== PRODUCTS WITH STOCK DEBUG ===');
+    console.log('orderStockAllocationsResponse:', orderStockAllocationsResponse);
+    console.log('productStocksResponse:', productStocksResponse);
+    
     const orderStockAllocations = orderStockAllocationsResponse?.data || [];
+    const productStocks = productStocksResponse || [];
+    
+    console.log('orderStockAllocations:', orderStockAllocations);
+    console.log('productStocks:', productStocks);
+    
     return formData.products.map(orderProduct => {
+      // Find the product_prices record for this product+category combination
+      const productPriceRecord = productStocks
+        .find(ps => ps.product_id === orderProduct.product_id);
+      
+      console.log('Product Price Record for', orderProduct.product_name, ':', productPriceRecord);
+      
+      // Get allocated quantity from stock allocations
+      // Filter by: stock_item_id = product_prices.id AND stock_entry_type = OUTWARD AND stock_type = PRODUCT
       const allocatedQuantity = orderStockAllocations
-        .filter(allocation => allocation.stock_item_id === orderProduct.product_id)
+        .filter(allocation => 
+          allocation.stock_item_id === productPriceRecord?.id &&  // product_prices primary key
+          allocation.stock_entry_type === 'OUTWARD' && 
+          allocation.stock_type === 'PRODUCT'
+        )
         .reduce((sum, allocation) => sum + allocation.quantity_allocated, 0);
+
+      // Get current stock from product_prices
+      const productStock = productPriceRecord?.stock || 0;
+
+      // Calculate remaining quantity
+      const remainingQuantity = productStock - allocatedQuantity;
+
+      console.log('Product:', orderProduct.product_name, {
+        productPriceId: productPriceRecord?.id,
+        stock: productStock,
+        allocated_quantity: allocatedQuantity,
+        remaining_quantity: remainingQuantity,
+        matchingAllocations: orderStockAllocations.filter(allocation => 
+          allocation.stock_item_id === productPriceRecord?.id && 
+          allocation.stock_entry_type === 'OUTWARD' && 
+          allocation.stock_type === 'PRODUCT'
+        )
+      });
 
       return {
         ...orderProduct,
-        currentStock: 0, // This will be populated from the products table
-        allocatedQuantity: allocatedQuantity,
+        quantity_ordered: orderProduct.number_of_pouches,  // ADD: map number_of_pouches to quantity_ordered
+        stock: productStock,  // RENAMED: currentStock -> stock
+        allocated_quantity: allocatedQuantity,  // RENAMED: allocatedQuantity -> allocated_quantity
+        remaining_quantity: remainingQuantity,  // RENAMED: remainingQuantity -> remaining_quantity
       };
     });
-  }, [formData.products, orderStockAllocationsResponse?.data]);
+  }, [formData.products, orderStockAllocationsResponse?.data, productStocksResponse, formData.category?.id]);
 
   // --- Handle Product Stock Allocation ---
   const allocateMutation = useMutation({
@@ -260,6 +340,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-allocations', order?.id] });
+      queryClient.invalidateQueries({ queryKey: ['product-stocks-for-order', formData.products?.map(p => p.product_id), formData.category?.id] });
       toast({
         title: 'Success',
         description: 'Product stock allocated successfully.',
@@ -630,6 +711,10 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                orderId={order?.id || ''}
                isReadOnly={isReadOnly}
              />
+             {/* DEBUG: Show data */}
+             <div className="mt-4 p-2 bg-gray-100 text-xs">
+               <strong>DEBUG:</strong> productsWithStockAndAllocation: {JSON.stringify(productsWithStockAndAllocation, null, 2)}
+             </div>
             </TabsContent>
           </Tabs>
           {validationError && (

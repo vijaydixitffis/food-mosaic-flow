@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ImageIcon } from 'lucide-react';
@@ -25,6 +25,65 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
       return data;
     },
   });
+
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
+
+  const rawLogoUrl = useMemo(() => {
+    return companySettings?.company_logo_url || null;
+  }, [companySettings?.company_logo_url]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveLogoUrl = async (url: string) => {
+      if (url.startsWith('data:')) return url;
+      if (url.startsWith('http')) return url;
+
+      return `${window.location.origin}/${url.replace(/^\//, '')}`;
+    };
+
+    const refreshSignedUrlIfNeeded = async (url: string) => {
+      try {
+        if (!url.includes('/storage/v1/object/sign/')) return url;
+
+        const parsed = new URL(url);
+        const parts = parsed.pathname.split('/').filter(Boolean);
+
+        const signIndex = parts.findIndex((p) => p === 'sign');
+        if (signIndex === -1) return url;
+        const bucket = parts[signIndex + 1];
+        if (!bucket) return url;
+        const filePath = parts.slice(signIndex + 2).join('/');
+        if (!filePath) return url;
+
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(filePath, 60 * 60 * 24 * 7);
+
+        if (error || !data?.signedUrl) return url;
+        return data.signedUrl;
+      } catch {
+        return url;
+      }
+    };
+
+    const run = async () => {
+      if (!rawLogoUrl) {
+        if (!cancelled) setLogoSrc(null);
+        return;
+      }
+
+      const resolved = await resolveLogoUrl(rawLogoUrl);
+      const refreshed = await refreshSignedUrlIfNeeded(resolved);
+      if (!cancelled) setLogoSrc(refreshed);
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rawLogoUrl]);
 
   const getSizeClasses = () => {
     switch (size) {
@@ -73,27 +132,34 @@ export function CompanyLogo({ size = 'md', className = '', showName = true }: Co
     );
   }
 
-  if (companySettings.company_logo_url) {
-    // Use absolute URL for logo if src is relative
-    const absoluteSrc = companySettings.company_logo_url.startsWith('http') ? companySettings.company_logo_url : `${window.location.origin}/${companySettings.company_logo_url.replace(/^\//, '')}`;
+  if (logoSrc) {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <img
-          src={absoluteSrc}
+          src={logoSrc}
           alt={companySettings.company_name}
           className={`object-contain ${getSizeClasses()}`}
           style={{ maxWidth: '160px', height: '60px', objectFit: 'contain', display: 'block' }}
+          crossOrigin="anonymous"
           onError={(e) => {
-            // Fallback to text if image fails to load
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
             target.nextElementSibling?.classList.remove('hidden');
           }}
         />
-        {showName && (
+        {showName ? (
           <span className={`font-semibold text-gray-900 ${getTextSize()}`}>
             {companySettings.company_name}
           </span>
+        ) : (
+          <div className="hidden">
+            <div 
+              className={`flex items-center justify-center bg-gray-100 rounded ${getSizeClasses()}`}
+              style={getCustomStyle()}
+            >
+              <ImageIcon className="w-1/2 h-1/2 text-gray-400" />
+            </div>
+          </div>
         )}
       </div>
     );

@@ -21,6 +21,7 @@ interface ProductWithStockAndAllocation {
   quantity_ordered: number; // number_of_pouches from order_products
   stock: number | null;
   allocated_quantity: number;
+  remaining_quantity: number; // NEW: calculated remaining stock
 }
 
 interface OrderStockAllocationTabProps {
@@ -115,6 +116,7 @@ export function OrderStockAllocationTab({
               <TableHead>Ordered Qty</TableHead>
               <TableHead>Current Stock</TableHead>
               <TableHead>Allocated Qty</TableHead>
+              <TableHead>Remaining Qty</TableHead>
               {!isReadOnly && <TableHead>Allocate</TableHead>}
               {!isReadOnly && <TableHead>Action</TableHead>}
             </TableRow>
@@ -122,7 +124,7 @@ export function OrderStockAllocationTab({
           <TableBody>
             {productsWithStockAndAllocation.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isReadOnly ? 4 : 6} className="text-center">
+                <TableCell colSpan={isReadOnly ? 5 : 7} className="text-center">
                   No products in this order or stock data not available.
                 </TableCell>
               </TableRow>
@@ -133,6 +135,9 @@ export function OrderStockAllocationTab({
                   <TableCell>{product.quantity_ordered}</TableCell>
                   <TableCell>{product.stock !== null ? product.stock : 'N/A'}</TableCell>
                   <TableCell>{product.allocated_quantity}</TableCell>
+                  <TableCell className={product.remaining_quantity < 0 ? "text-red-600 font-semibold" : ""}>
+                    {product.remaining_quantity}
+                  </TableCell>
                   {!isReadOnly && (
                     <TableCell>
                       <Input

@@ -130,7 +130,7 @@ export function WorkOrderProductsTab({
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as Order[];
+      return data as unknown as Order[];
     },
   });
 
@@ -153,7 +153,7 @@ export function WorkOrderProductsTab({
         .eq('order_id', selectedOrderId);
       
       if (error) throw error;
-      return data as OrderProduct[];
+      return data as unknown as OrderProduct[];
     },
     enabled: !!selectedOrderId,
   });
@@ -288,8 +288,8 @@ export function WorkOrderProductsTab({
     setNextItemId(nextId => nextId + 1);
   };
 
-  const removeProductItem = (id: string) => {
-    const updatedProducts = formData.products.filter(item => item.id !== id);
+  const removeProductItem = (index: number) => {
+    const updatedProducts = formData.products.filter((_, i) => i !== index);
     setFormData({
       ...formData,
       products: updatedProducts,
@@ -506,8 +506,8 @@ export function WorkOrderProductsTab({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  formData.products.map((item) => (
-                    <TableRow key={item.id}>
+                  formData.products.map((item, index) => (
+                    <TableRow key={index}>
                       <TableCell className="font-medium">
                         {getProductName(item.product_id)}
                       </TableCell>
@@ -516,7 +516,7 @@ export function WorkOrderProductsTab({
                       <TableCell>
                         {item.total_weight.toLocaleString()}g 
                         <span className="text-muted-foreground ml-1">
-                          ({(item.total_weight / 1000).toFixed(2)}kg)
+                          ({(item.total_weight / 1000).toFixed(3)}kg)
                         </span>
                       </TableCell>
                       {!isReadOnly && (
@@ -524,7 +524,7 @@ export function WorkOrderProductsTab({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeProductItem(item.id)}
+                            onClick={() => removeProductItem(index)}
                             className="text-red-600 hover:text-red-700"
                             title="Remove item"
                           >
