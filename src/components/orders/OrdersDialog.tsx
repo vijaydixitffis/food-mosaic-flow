@@ -16,7 +16,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { getStockAllocationsByOrder, allocateProductStock } from '@/integrations/supabase/stock';
 import { OrderStockAllocationTab } from './OrderStockAllocationTab';
 // Predefined pouch sizes in grams (copied from WorkOrderProductsTab)
-const POUCH_SIZES = [50, 100, 125, 150, 250, 500, 1000];
+const POUCH_SIZES = [50, 100, 125, 140, 150, 250, 500, 1000];
 
 export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) {
   const [tab, setTab] = useState('details');
