@@ -286,7 +286,7 @@ export function DeliveryChallan({
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
                     <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Pouch Size (g)</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Weight (g)</th>
                     <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
                     <th className="border border-gray-300 px-1 py-0.5">Qty</th>
                     <th className="border border-gray-300 px-1 py-0.5">Total Value (₹)</th>

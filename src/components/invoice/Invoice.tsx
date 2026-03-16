@@ -194,6 +194,41 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
   const quantity = item.number_of_pouches;
   return sum + (mrp * quantity);
 }, 0);
+  // Number to words conversion function
+  const numberToWords = (num: number): string => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
+                'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    if (num === 0) return 'Zero';
+    
+    // Split into integer and decimal parts
+    const integerPart = Math.floor(num);
+    const decimalPart = Math.round((num - integerPart) * 100);
+    
+    let words = '';
+    
+    // Convert integer part
+    if (integerPart < 20) {
+      words = ones[integerPart];
+    } else if (integerPart < 100) {
+      words = tens[Math.floor(integerPart / 10)] + ' ' + ones[integerPart % 10];
+    } else if (integerPart < 1000) {
+      words = ones[Math.floor(integerPart / 100)] + ' Hundred ' + (integerPart % 100 !== 0 ? numberToWords(integerPart % 100) : '');
+    } else if (integerPart < 100000) {
+      words = numberToWords(Math.floor(integerPart / 1000)) + ' Thousand ' + (integerPart % 1000 !== 0 ? numberToWords(integerPart % 1000) : '');
+    } else if (integerPart < 10000000) {
+      words = numberToWords(Math.floor(integerPart / 100000)) + ' Lakh ' + (integerPart % 100000 !== 0 ? numberToWords(integerPart % 100000) : '');
+    }
+    
+    // Add decimal part if exists
+    if (decimalPart > 0) {
+      words += ' and ' + numberToWords(decimalPart) + ' Paise';
+    }
+    
+    return words.trim();
+  };
+
   // Calculate total (Taxable Value + GST Amount)
   function calcTotal(taxableValue: number, gstAmount: number) {
     return taxableValue + gstAmount;
@@ -376,7 +411,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
                     <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Pouch Size (g)</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Weight (g)</th>
                     <th className="border border-gray-300 px-1 py-0.5">HSN Code</th>
                     <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
                     <th className="border border-gray-300 px-1 py-0.5">Qty</th>
@@ -486,8 +521,16 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                   <span>Grand Total:</span>
                   <span>₹{(totalTaxableValue + totalGST).toFixed(2)}</span>
                 </div>
+                
               </div>
             </div>
+
+            {/*Amount in words*/}
+            <div className="mb-8">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">Amount in words:</h3>
+                  <span className="font-semibold">Rupees {numberToWords(totalTaxableValue + totalGST)} Only</span>
+                  </div>
+                
 
             {/* Declaration */}
             {(() => {
