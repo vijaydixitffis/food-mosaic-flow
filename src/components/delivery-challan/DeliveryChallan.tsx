@@ -286,7 +286,7 @@ export function DeliveryChallan({
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
                     <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Pack Type</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Pouch Size (g)</th>
                     <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
                     <th className="border border-gray-300 px-1 py-0.5">Qty</th>
                     <th className="border border-gray-300 px-1 py-0.5">Total Value (₹)</th>
@@ -305,7 +305,7 @@ export function DeliveryChallan({
                           {item.products?.name || 'Unknown Product'}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
-                          {item.products?.pack_type || 'N/A'}
+                          {item.pouch_size || 'N/A'}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           ₹{mrp.toFixed(2)}

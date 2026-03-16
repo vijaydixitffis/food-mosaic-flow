@@ -376,6 +376,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
                     <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
+                    <th className="border border-gray-300 px-1 py-0.5">Pouch Size (g)</th>
                     <th className="border border-gray-300 px-1 py-0.5">HSN Code</th>
                     <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
                     <th className="border border-gray-300 px-1 py-0.5">Qty</th>
@@ -414,10 +415,10 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                       <tr key={item.id}>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">{index + 1}</td>
                         <td className="border border-gray-300 px-1 py-0.5">
-                          {item.products?.name && item.products.pack_type 
-                            ? `${item.products.name.toUpperCase()} (${item.products.pack_type})`
-                            : (item.products?.name || 'Unknown Product').toUpperCase()
-                          }
+                          {(item.products?.name || 'Unknown Product').toUpperCase()}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                          {item.pouch_size || 'N/A'}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           {item.products?.hsn_code || 'N/A'}
