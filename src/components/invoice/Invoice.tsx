@@ -234,6 +234,12 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
     return taxableValue + gstAmount;
   }
 
+  // Round amount based on paise value
+  function roundAmount(amount: number): number {
+    const decimalPart = amount - Math.floor(amount);
+    return decimalPart < 0.50 ? Math.ceil(amount) : Math.floor(amount);
+  }
+
   // For totals
   let totalGST = 0;
   let totalTaxableValue = 0;
@@ -290,7 +296,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
       // Calculate optimal scale to fit content on one A4 page
       // A4 dimensions: 8.27 x 11.69 inches (210 x 297 mm)
       // Accounting for margins: usable area
-      const margin = 0.15; // Reduced margin for more space
+      const margin = 0.08; // Increased margin for better content accommodation
       const a4Width = 8.27; // inches
       const a4Height = 11.69; // inches
       
@@ -406,27 +412,27 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
 
             {/* Order Items Table */}
             <div className="mb-8">
-              <table className="w-full border-collapse border border-gray-300 text-xs">
+              <table className="w-full border-collapse border border-gray-300" style={{fontSize: '11px', scale: 1.05, transformOrigin: 'center' }}>
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-1 py-0.5">Sr.</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Product Name</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Weight (g)</th>
-                    <th className="border border-gray-300 px-1 py-0.5">HSN Code</th>
-                    <th className="border border-gray-300 px-1 py-0.5">MRP (₹)</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Qty</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Base Rate (₹)</th>
-                    <th className="border border-gray-300 px-1 py-0.5">Taxable Amt. (₹)</th>
-                    <th className="border border-gray-300 px-1 py-0.5">GST</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">Sr.</th>
+                    <th className="border border-gray-300">Product Name</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">Weight <br/> (g)</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">HSN Code</th>
+                    <th className="border border-gray-300 px-2 py-0.5 text-center whitespace-nowrap">MRP <br/>(₹)</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">Qty</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">Base <br/> Rate (₹)</th>
+                    <th className="border border-gray-300 px-2 py-0.5 text-center whitespace-nowrap">Taxable<br/> Amt. (₹)</th>
+                    <th className="border border-gray-300 px-1 py-0.5 text-center">GST</th>
                     {order.clients.is_igst ? (
-                      <th className="border border-gray-300 px-4 py-2">IGST</th>
+                      <th className="border border-gray-300 px-4 py-1 text-center">IGST</th>
                     ) : (
                       <>
-                        <th className="border border-gray-300 px-4 py-2">CGST</th>
-                        <th className="border border-gray-300 px-4 py-2">SGST</th>
+                        <th className="border border-gray-300 px-4 py-1 text-center">CGST</th>
+                        <th className="border border-gray-300 px-4 py-1 text-center">SGST</th>
                       </>
                     )}
-                    <th className="border border-gray-300 px-4 py-2">Total (₹)</th>
+                    <th className="border border-gray-300 px-4 py-1 text-center">Total (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -449,45 +455,45 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                     return (
                       <tr key={item.id}>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">{index + 1}</td>
-                        <td className="border border-gray-300 px-1 py-0.5">
+                        <td className="border border-gray-300">
                           {(item.products?.name || 'Unknown Product').toUpperCase()}
                         </td>
-                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                        <td className="border border-gray-300 px-0.5 py-0.5 text-center">
                           {item.pouch_size || 'N/A'}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           {item.products?.hsn_code || 'N/A'}
                         </td>
-                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                        <td className="border border-gray-300 px-2 py-0.5 text-right whitespace-nowrap">
                           ₹{rate.toFixed(2)}
                         </td>
                         <td className="border border-gray-300 px-1 py-0.5 text-center">
                           {quantity}
                         </td>
-                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                        <td className="border border-gray-300 px-1 py-0.5 text-right whitespace-nowrap">
                           ₹{discountedBasePrice.toFixed(2)}
                         </td>
-                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                        <td className="border border-gray-300 px-2 py-0.5 text-right whitespace-nowrap">
                           ₹{taxableValue.toFixed(2)}
                         </td>
-                        <td className="border border-gray-300 px-1 py-0.5 text-center">
+                        <td className="border border-gray-300 px-1 py-0.5 text-right whitespace-nowrap">
                           {gstPercent}%
                         </td>
                         {order.clients.is_igst ? (
-                          <td className="border border-gray-300 px-4 py-2 text-center">
+                          <td className="border border-gray-300 px-3 py-2 text-right whitespace-nowrap">
                             ₹{gstAmount.toFixed(2)}
                           </td>
                         ) : (
                           <>
-                            <td className="border border-gray-300 px-4 py-2 text-center">
+                            <td className="border border-gray-300 px-3 py-2 text-right whitespace-nowrap">
                               ₹{(gstAmount / 2).toFixed(2)}
                             </td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">
+                            <td className="border border-gray-300 px-3 py-2 text-right whitespace-nowrap">
                               ₹{(gstAmount / 2).toFixed(2)}
                             </td>
                           </>
                         )}
-                        <td className="border border-gray-300 px-4 py-2 text-center">
+                        <td className="border border-gray-300 px-4 py-2 text-right whitespace-nowrap">
                           ₹{total.toFixed(2)}
                         </td>
                       </tr>
@@ -519,7 +525,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                 </div>
                 <div className="flex justify-between font-bold text-base border-t pt-2">
                   <span>Grand Total:</span>
-                  <span>₹{(totalTaxableValue + totalGST).toFixed(2)}</span>
+                  <span>₹{roundAmount(totalTaxableValue + totalGST).toFixed(2)}</span>
                 </div>
                 
               </div>
@@ -528,7 +534,7 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
             {/*Amount in words*/}
             <div className="mb-8">
                   <h3 className="text-base font-semibold text-gray-900 mb-2">Amount in words:</h3>
-                  <span className="font-semibold">Rupees {numberToWords(totalTaxableValue + totalGST)} Only</span>
+                  <span className="font-semibold">Rupees {numberToWords(roundAmount(totalTaxableValue + totalGST))} Only</span>
                   </div>
                 
 
