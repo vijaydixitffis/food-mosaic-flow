@@ -38,18 +38,19 @@ export function ProductCompoundsTab({
   }, [productCompounds]);
 
   const handleQuantityChange = (compoundId: string, value: string) => {
-    // Only allow numbers and decimal points
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+    const normalizedValue = value.replace(/,/g, '.');
+
+    if (normalizedValue === '' || /^\d*\.?\d*$/.test(normalizedValue)) {
       setQuantities(prev => ({
         ...prev,
-        [compoundId]: value
+        [compoundId]: normalizedValue
       }));
       
       // Update the parent component if the value is a valid number
-      const numValue = parseFloat(value);
+      const numValue = parseFloat(normalizedValue);
       if (!isNaN(numValue) && numValue > 0) {
         onUpdateQuantity(compoundId, numValue);
-      } else if (value === '') {
+      } else if (normalizedValue === '') {
         // If the field is cleared, remove the compound
         onRemoveCompound(compoundId);
       }
@@ -111,13 +112,28 @@ export function ProductCompoundsTab({
                   onBlur={() => handleBlur(compound.id)}
                   className="w-24 text-right"
                   onKeyDown={(e) => {
-                    // Prevent non-numeric input
-                    if (!/[0-9.]/.test(e.key) && 
-                        e.key !== 'Backspace' && 
-                        e.key !== 'Delete' && 
-                        e.key !== 'Tab' && 
-                        !e.ctrlKey && 
-                        !e.metaKey) {
+                    if (e.ctrlKey || e.metaKey) return;
+
+                    if (
+                      e.key === 'Backspace' ||
+                      e.key === 'Delete' ||
+                      e.key === 'Tab' ||
+                      e.key === 'Enter' ||
+                      e.key === 'Escape' ||
+                      e.key === 'ArrowLeft' ||
+                      e.key === 'ArrowRight' ||
+                      e.key === 'ArrowUp' ||
+                      e.key === 'ArrowDown' ||
+                      e.key === 'Home' ||
+                      e.key === 'End'
+                    ) {
+                      return;
+                    }
+
+                    const isAllowedDecimalKey = e.key === '.' || e.key === ',' || e.key === 'Decimal';
+                    const isAllowedDigitKey = /^[0-9]$/.test(e.key);
+
+                    if (!isAllowedDigitKey && !isAllowedDecimalKey) {
                       e.preventDefault();
                     }
                   }}
