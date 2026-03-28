@@ -469,10 +469,12 @@ export async function getRequiredIngredientsForWorkOrder(workOrderId: string) {
       const ingredientId = pi.ingredient_id;
       const unit = pi.ingredients.unit_of_measurement || 'kg';
       
-      // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
-      // Since product_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
-      const totalProductWeight = (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
-      const ingredientWeightPerKg = (pi.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
+      // Calculate total ingredient weight based on work order product weight
+      // product_ingredients.quantity is stored for 10kg of product, so divide by 10 to get per kg
+      const totalProductWeight = Number.isFinite(workOrderProduct.total_weight) && workOrderProduct.total_weight > 0
+        ? workOrderProduct.total_weight
+        : (workOrderProduct.pouch_size * workOrderProduct.number_of_pouches) / 1000;
+      const ingredientWeightPerKg = (pi.quantity || 0) / 10;
       const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
       const quantityInKg = convertToKg(totalIngredientWeight, unit);
       

@@ -56,6 +56,7 @@ interface WorkOrderInventoryTabProps {
 
 interface ProductInfo {
   id: string;
+  product_id: string;
   name: string;
   total_weight: number;
   number_of_pouches: number;
@@ -110,8 +111,9 @@ export function WorkOrderInventoryTab({
       if (productError) throw productError;
 
       // Create product info map with pouch information
-      const products: ProductInfo[] = formData.products.map(wop => ({
-        id: wop.product_id,
+      const products: ProductInfo[] = formData.products.map((wop, index) => ({
+        id: (wop as any).id || `${wop.product_id}-${index}`,
+        product_id: wop.product_id,
         name: productDetails?.find(p => p.id === wop.product_id)?.name || `Product ${wop.product_id}`,
         total_weight: wop.total_weight,
         number_of_pouches: wop.number_of_pouches,
@@ -167,62 +169,71 @@ export function WorkOrderInventoryTab({
       // Process compounds first
       productCompounds?.forEach(pc => {
         if (!pc.compounds) return;
-        
-        const product = products.find(p => p.id === pc.product_id);
-        if (!product) return;
+
+        const productRows = products.filter(p => p.product_id === pc.product_id);
+        if (productRows.length === 0) return;
 
         const compoundId = pc.compound_id;
-        // Calculate total compound weight: (compound_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
-        // Since product_compounds.quantity is now for 5kg of product, we divide by 5 to get per kg
-        const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
-        const compoundWeightPerKg = (pc.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
-        const totalCompoundWeight = compoundWeightPerKg * totalProductWeight;
-        // Convert to kg (assuming compounds are stored in grams like ingredients)
-        const quantityInKg = convertToKg(totalCompoundWeight, 'g');
+
+        productRows.forEach(productRow => {
+          const pouchDerivedWeight = (productRow.pouch_size * productRow.number_of_pouches) / 1000;
+          const totalProductWeight = Number.isFinite(pouchDerivedWeight) && pouchDerivedWeight > 0
+            ? pouchDerivedWeight
+            : (Number.isFinite(productRow.total_weight) && productRow.total_weight > 0 ? productRow.total_weight : 0);
+          const compoundWeightPerKg = (pc.quantity || 0) / 5;
+          const totalCompoundWeight = compoundWeightPerKg * totalProductWeight;
+          const quantityInKg = convertToKg(totalCompoundWeight, 'g');
         
-        if (!compoundMap.has(compoundId)) {
-          compoundMap.set(compoundId, {
-            id: compoundId,
-            name: pc.compounds.name,
-            quantities: {},
-            total_quantity: 0
-          });
-        }
-        
-        const compound = compoundMap.get(compoundId)!;
-        compound.quantities[product.id] = (compound.quantities[product.id] || 0) + quantityInKg;
-        compound.total_quantity += quantityInKg;
+          if (!compoundMap.has(compoundId)) {
+            compoundMap.set(compoundId, {
+              id: compoundId,
+              name: pc.compounds.name,
+              quantities: {},
+              total_quantity: 0
+            });
+          }
+          
+          const compound = compoundMap.get(compoundId)!;
+          compound.quantities[productRow.id] = (compound.quantities[productRow.id] || 0) + quantityInKg;
+          compound.total_quantity += quantityInKg;
+        });
       });
 
       // Process direct product ingredients (excluding those that are part of compounds)
       productIngredients?.forEach(pi => {
         if (!pi.ingredients) return;
-        
-        const product = products.find(p => p.id === pi.product_id);
-        if (!product) return;
+
+        const productRows = products.filter(p => p.product_id === pi.product_id);
+        if (productRows.length === 0) return;
 
         const ingredientId = pi.ingredient_id;
         const unit = pi.ingredients.unit_of_measurement || 'kg';
-        // Calculate total ingredient weight: (ingredient_weight / 5 / 1000) * [(pouch_size * number_of_pouches) / 1000]
-        // Since product_ingredients.quantity is now for 5kg of product, we divide by 5 to get per kg
-        const totalProductWeight = (product.pouch_size * product.number_of_pouches) / 1000; // Convert total product weight to kg
-        const ingredientWeightPerKg = (pi.quantity || 0) / 5; // Convert from 5kg basis to 1kg basis
-        const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
-        const quantityInKg = convertToKg(totalIngredientWeight, unit);
+
+        productRows.forEach(productRow => {
+          // Calculate total ingredient weight based on work order product weight
+          // product_ingredients.quantity is stored for 10kg of product, so divide by 10 to get per kg
+          const pouchDerivedWeight = (productRow.pouch_size * productRow.number_of_pouches) / 1000;
+          const totalProductWeight = Number.isFinite(pouchDerivedWeight) && pouchDerivedWeight > 0
+            ? pouchDerivedWeight
+            : (Number.isFinite(productRow.total_weight) && productRow.total_weight > 0 ? productRow.total_weight : 0);
+          const ingredientWeightPerKg = (pi.quantity || 0) / 10;
+          const totalIngredientWeight = ingredientWeightPerKg * totalProductWeight;
+          const quantityInKg = convertToKg(totalIngredientWeight, unit);
         
-        if (!ingredientMap.has(ingredientId)) {
-          ingredientMap.set(ingredientId, {
-            id: ingredientId,
-            name: pi.ingredients.name,
-            unit_of_measurement: 'kg', // Always use kg after conversion
-            quantities: {},
-            total_quantity: 0
-          });
-        }
-        
-        const ingredient = ingredientMap.get(ingredientId)!;
-        ingredient.quantities[product.id] = (ingredient.quantities[product.id] || 0) + quantityInKg;
-        ingredient.total_quantity += quantityInKg;
+          if (!ingredientMap.has(ingredientId)) {
+            ingredientMap.set(ingredientId, {
+              id: ingredientId,
+              name: pi.ingredients.name,
+              unit_of_measurement: 'kg', // Always use kg after conversion
+              quantities: {},
+              total_quantity: 0
+            });
+          }
+          
+          const ingredient = ingredientMap.get(ingredientId)!;
+          ingredient.quantities[productRow.id] = (ingredient.quantities[productRow.id] || 0) + quantityInKg;
+          ingredient.total_quantity += quantityInKg;
+        });
       });
 
       // Convert maps to arrays and sort by name

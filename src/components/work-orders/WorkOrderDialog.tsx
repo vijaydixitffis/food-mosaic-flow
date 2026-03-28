@@ -59,6 +59,7 @@ export interface WorkOrderFormData {
   remarks: string;
   status: WorkOrderStatus;
   products: Array<{
+    id?: string;
     product_id: string;
     number_of_pouches: number;
     pouch_size: number;
