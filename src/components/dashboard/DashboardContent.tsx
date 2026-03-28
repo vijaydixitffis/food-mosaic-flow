@@ -10,6 +10,7 @@ import { OrdersPage } from '@/components/orders/OrdersPage';
 import { WorkOrdersPage } from '@/components/work-orders/WorkOrdersPage';
 import { InvoicesPage } from '@/components/invoice/InvoicesPage';
 import { CompanySettingsPage } from '@/components/settings/CompanySettingsPage';
+import { ReportsPage } from '@/components/reports/ReportsPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -136,7 +137,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
       case 'settings':
         return <CompanySettingsPage />;
       case 'reports':
-        return <div className="p-6">Reports Page - Coming Soon</div>;
+        return <ReportsPage />;
       default:
         return renderHomeDashboard();
     }
