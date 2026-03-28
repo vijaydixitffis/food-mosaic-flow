@@ -347,6 +347,67 @@ export interface Database {
         }
         Relationships: []
       }
+      work_orders: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          remarks: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          remarks?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          remarks?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      work_order_products: {
+        Row: {
+          id: string
+          work_order_id: string
+          product_id: string
+          pouch_size: number
+          number_of_pouches: number
+          total_weight: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          work_order_id: string
+          product_id: string
+          pouch_size: number
+          number_of_pouches: number
+          total_weight: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          work_order_id?: string
+          product_id?: string
+          pouch_size?: number
+          number_of_pouches?: number
+          total_weight?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -355,7 +416,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      work_order_status: 'draft' | 'in_progress' | 'completed' | 'cancelled'
     }
     CompositeTypes: {
       [_ in never]: never

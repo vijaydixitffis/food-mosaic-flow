@@ -94,7 +94,7 @@ export function WorkOrderDialog({
     name: '',
     description: '',
     remarks: '',
-    status: 'CREATED',
+    status: 'draft',
     products: [],
   });
   const { toast } = useToast();
@@ -287,7 +287,7 @@ export function WorkOrderDialog({
         name: workOrder.name,
         description: workOrder.description || '',
         remarks: workOrder.remarks || '',
-        status: workOrder.status,
+        status: workOrder.status as WorkOrderStatus,
         products: workOrder.work_order_products.map(wop => ({
           id: wop.id,
           product_id: wop.product_id,
@@ -301,7 +301,7 @@ export function WorkOrderDialog({
         name: '',
         description: '',
         remarks: '',
-        status: 'CREATED',
+        status: 'draft',
         products: [],
       });
     }
