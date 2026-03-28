@@ -307,7 +307,7 @@ export function WorkOrderInventoryTab({
                         <div className="flex flex-col">
                           <span className="font-medium">{product.name}</span>
                           <span className="text-xs text-gray-500">
-                            {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(3)} kg
+                            {((product.number_of_pouches * product.pouch_size)).toFixed(0)} g
                           </span>
                         </div>
                       </TableHead>
@@ -315,7 +315,7 @@ export function WorkOrderInventoryTab({
                     <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
                       <div className="flex flex-col">
                         <span>Total Required</span>
-                        <span className="text-xs text-gray-500">kg</span>
+                        <span className="text-xs text-gray-500">g</span>
                       </div>
                     </TableHead>
                   </TableRow>
@@ -328,11 +328,11 @@ export function WorkOrderInventoryTab({
                       </TableCell>
                       {products.map(product => (
                         <TableCell key={`${compound.id}-${product.id}`} className="text-right">
-                          {compound.quantities[product.id]?.toFixed(3) || '-'}
+                          {(compound.quantities[product.id] * 1000)?.toFixed(0) || '-'}
                         </TableCell>
                       ))}
                       <TableCell className="text-right font-medium bg-gray-50">
-                        {compound.total_quantity.toFixed(3)}
+                        {(compound.total_quantity * 1000).toFixed(0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -348,12 +348,12 @@ export function WorkOrderInventoryTab({
                       );
                       return (
                         <TableCell key={`total-comp-${product.id}`} className="text-right font-medium">
-                          {total.toFixed(3)}
+                          {(total * 1000).toFixed(0)}
                         </TableCell>
                       );
                     })}
                     <TableCell className="text-right font-bold">
-                      {compounds.reduce((sum, comp) => sum + comp.total_quantity, 0).toFixed(3)}
+                      {(compounds.reduce((sum, comp) => sum + comp.total_quantity, 0) * 1000).toFixed(0)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -388,7 +388,7 @@ export function WorkOrderInventoryTab({
                         <div className="flex flex-col">
                           <span className="font-medium">{product.name}</span>
                           <span className="text-xs text-gray-500">
-                            {((product.number_of_pouches * product.pouch_size) / 1000).toFixed(3)} kg
+                            {((product.number_of_pouches * product.pouch_size)).toFixed(0)} g
                           </span>
                         </div>
                       </TableHead>
@@ -396,7 +396,7 @@ export function WorkOrderInventoryTab({
                     <TableHead className="text-right min-w-[150px] font-medium bg-gray-50">
                       <div className="flex flex-col">
                         <span>Total Required</span>
-                        <span className="text-xs text-gray-500">kg</span>
+                        <span className="text-xs text-gray-500">g</span>
                       </div>
                     </TableHead>
                   </TableRow>
@@ -409,11 +409,11 @@ export function WorkOrderInventoryTab({
                       </TableCell>
                       {products.map(product => (
                         <TableCell key={`${ingredient.id}-${product.id}`} className="text-right">
-                          {ingredient.quantities[product.id]?.toFixed(3) || '-'}
+                          {(ingredient.quantities[product.id] * 1000)?.toFixed(0) || '-'}
                         </TableCell>
                       ))}
                       <TableCell className="text-right font-medium bg-gray-50">
-                        {ingredient.total_quantity.toFixed(3)}
+                        {(ingredient.total_quantity * 1000).toFixed(0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -429,12 +429,12 @@ export function WorkOrderInventoryTab({
                       );
                       return (
                         <TableCell key={`total-ing-${product.id}`} className="text-right font-medium">
-                          {total.toFixed(3)}
+                          {(total * 1000).toFixed(0)}
                         </TableCell>
                       );
                     })}
                     <TableCell className="text-right font-bold">
-                      {ingredients.reduce((sum, ing) => sum + ing.total_quantity, 0).toFixed(3)}
+                      {(ingredients.reduce((sum, ing) => sum + ing.total_quantity, 0) * 1000).toFixed(0)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
