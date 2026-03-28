@@ -142,54 +142,42 @@ export function ReportsPage() {
             <CardContent>
               {/* Date Filter Section */}
               <Card className="bg-gray-50 border border-gray-200 mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Filter Criteria
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-700">Start Date</label>
-                      <Input
-                        type="date"
-                        value={invoiceDateFromInput}
-                        onChange={(e) => setInvoiceDateFromInput(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-700">End Date</label>
-                      <Input
-                        type="date"
-                        value={invoiceDateToInput}
-                        onChange={(e) => setInvoiceDateToInput(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button 
-                        size="sm" 
-                        className="flex items-center gap-1 h-9"
-                        onClick={() => {
-                          // Apply the input dates to the report
-                          setAppliedDateFrom(invoiceDateFromInput);
-                          setAppliedDateTo(invoiceDateToInput);
-                          // Trigger refetch for active report
-                          if (activeInvoiceReport === 'gst-sales-register') {
-                            (window as any).gstSalesRegisterRefetch?.();
-                          } else if (activeInvoiceReport === 'revenue-by-client') {
-                            (window as any).revenueByClientRefetch?.();
-                          } else if (activeInvoiceReport === 'hsn-wise-revenue') {
-                            (window as any).hsnWiseRevenueRefetch?.();
-                          }
-                        }}
-                      >
-                        <Search className="w-4 h-4" />
-                        Apply Filters
-                      </Button>
-                    </div>
+                <CardContent className="py-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-gray-700">Start Date</span>
+                    <Input
+                      type="date"
+                      value={invoiceDateFromInput}
+                      onChange={(e) => setInvoiceDateFromInput(e.target.value)}
+                      className="h-8 w-36"
+                    />
+                    <span className="text-sm font-medium text-gray-700">End Date</span>
+                    <Input
+                      type="date"
+                      value={invoiceDateToInput}
+                      onChange={(e) => setInvoiceDateToInput(e.target.value)}
+                      className="h-8 w-36"
+                    />
+                    <Button 
+                      size="sm" 
+                      className="flex items-center gap-1 h-8"
+                      onClick={() => {
+                        // Apply the input dates to the report
+                        setAppliedDateFrom(invoiceDateFromInput);
+                        setAppliedDateTo(invoiceDateToInput);
+                        // Trigger refetch for active report
+                        if (activeInvoiceReport === 'gst-sales-register') {
+                          (window as any).gstSalesRegisterRefetch?.();
+                        } else if (activeInvoiceReport === 'revenue-by-client') {
+                          (window as any).revenueByClientRefetch?.();
+                        } else if (activeInvoiceReport === 'hsn-wise-revenue') {
+                          (window as any).hsnWiseRevenueRefetch?.();
+                        }
+                      }}
+                    >
+                      <Search className="w-4 h-4" />
+                      Filter
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
