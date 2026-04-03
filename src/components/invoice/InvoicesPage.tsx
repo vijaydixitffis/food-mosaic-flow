@@ -166,7 +166,7 @@ export function InvoicesPage() {
     order.clients?.client_code.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleGenerateInvoice = (order: Order) => {
+  const handleInvoice = (order: Order) => {
     if (isStaff) {
       toast({
         title: "Access Restricted",
@@ -180,7 +180,7 @@ export function InvoicesPage() {
     if (!order.order_products || order.order_products.length === 0) {
       toast({
         title: "No Products",
-        description: "Cannot generate invoice for an order with no products",
+        description: "Cannot create invoice for an order with no products",
         variant: "destructive",
       });
       return;
@@ -190,7 +190,7 @@ export function InvoicesPage() {
     if (!order.invoice_number) {
       toast({
         title: "No Invoice Number",
-        description: "This order does not have an invoice number assigned. Please edit the order to regenerate.",
+        description: "This order does not have an invoice number assigned. Please edit the order to add one.",
         variant: "destructive",
       });
       return;
@@ -234,7 +234,7 @@ export function InvoicesPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Invoices</h1>
-            <p className="text-slate-600">Generate and manage client invoices</p>
+            <p className="text-slate-600">View and manage client invoices</p>
           </div>
         </div>
       </div>
@@ -244,7 +244,7 @@ export function InvoicesPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5 text-purple-500" />
-            Search Orders for Invoice Generation
+            Search Orders for Invoicing
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -266,7 +266,7 @@ export function InvoicesPage() {
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">
-                {searchTerm ? 'No orders found matching your search.' : 'No orders available for invoice generation.'}
+                {searchTerm ? 'No orders found matching your search.' : 'No orders available for invoicing.'}
               </p>
             </div>
           ) : (
@@ -280,6 +280,11 @@ export function InvoicesPage() {
                           <Badge variant="outline" className="font-mono text-sm">
                             {order.order_code}
                           </Badge>
+                          {order.invoice_number && (
+                            <Badge variant="outline" className="font-mono text-sm bg-purple-100 text-purple-800 border-purple-300">
+                              {order.invoice_number}
+                            </Badge>
+                          )}
                           <Badge 
                             variant={order.status === 'COMPLETE' ? 'default' : 'secondary'}
                             className="bg-green-100 text-green-800 hover:bg-green-200"
@@ -301,7 +306,11 @@ export function InvoicesPage() {
                             <Calendar className="w-4 h-4 text-gray-500" />
                             <div>
                               <p className="font-medium">Order Date</p>
-                              <p className="text-gray-500">{order.order_date}</p>
+                              <p className="text-gray-500">{order.order_date ? new Date(order.order_date).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              }).replace(/ /g, '-') : '-'}</p>
                             </div>
                           </div>
                           
@@ -327,12 +336,12 @@ export function InvoicesPage() {
                       
                       <div className="ml-4">
                         <Button
-                          onClick={() => handleGenerateInvoice(order)}
+                          onClick={() => handleInvoice(order)}
                           disabled={!order.order_products || order.order_products.length === 0}
                           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-pink-600 text-white"
                         >
                           <FileText className="w-4 h-4 mr-2" />
-                          Generate Invoice
+                          View Invoice
                         </Button>
                       </div>
                     </div>
@@ -355,7 +364,7 @@ export function InvoicesPage() {
         />
       )}
 
-      {/* Invoice Number Dialog - Removed, using pre-generated invoice number */}
+      {/* Invoice Number Dialog - Removed, using pre-created invoice number */}
       {/* <InvoiceNumberDialog
         isOpen={showInvoiceNumberDialog}
         onClose={() => setShowInvoiceNumberDialog(false)}

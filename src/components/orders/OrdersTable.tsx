@@ -122,51 +122,59 @@ export function OrdersTable({
                     <span className="font-medium text-sm">{order.categories.category_name}</span>
                   </div>
                 </TableCell>
-                <TableCell>{order.order_date}</TableCell>
-                <TableCell>{order.target_delivery_date}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {order.order_date ? new Date(order.order_date).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  }).replace(/ /g, '-') : '-'}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {order.target_delivery_date ? new Date(order.target_delivery_date).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  }).replace(/ /g, '-') : '-'}
+                </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1">
                     <StatusSlider
                       isActive={isActive}
                       onToggle={() => onToggleStatus(order.id, order.status)}
                       orderCode={order.order_code}
                       disabled={isReadOnly || order.status === ORDER_STATUSES.COMPLETE}
                     />
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(order)}
-                        className="flex items-center gap-1"
-                      >
-                        {isReadOnly ? <Eye className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
-                        {isReadOnly ? 'View' : 'Edit'}
-                      </Button>
-                      {!isReadOnly && order.order_products && order.order_products.length > 0 && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onGenerateDeliveryChallan(order)}
-                            className="flex items-center gap-1"
-                            title="Generate Delivery Challan"
-                          >
-                            <Truck className="w-3 h-3" />
-                            Delivery Challan
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onGenerateInvoice(order)}
-                            className="flex items-center gap-1"
-                            title="Generate Invoice"
-                          >
-                            <FileText className="w-3 h-3" />
-                            Invoice
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(order)}
+                      className="px-2"
+                      title={isReadOnly ? 'View' : 'Edit'}
+                    >
+                      {isReadOnly ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                    </Button>
+                    {!isReadOnly && order.order_products && order.order_products.length > 0 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateDeliveryChallan(order)}
+                          className="px-2"
+                          title="Delivery Challan"
+                        >
+                          <Truck className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGenerateInvoice(order)}
+                          className="px-2"
+                          title="Invoice"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

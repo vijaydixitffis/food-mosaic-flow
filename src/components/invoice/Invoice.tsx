@@ -342,7 +342,11 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
   };
 
   const invoiceNumber = fullInvoiceNumber;
-  const currentDate = new Date().toLocaleDateString('en-IN');
+  const currentDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).replace(/ /g, '-');
   
   // Determine invoice title based on order status
   const invoiceTitle = order.status === 'NEW' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
@@ -381,7 +385,11 @@ const totalMRPValue = order.order_products.reduce((sum, item) => {
                   </div>
                   <p><span className="font-semibold">Date:</span> {currentDate}</p>
                   <p><span className="font-semibold">Order No:</span> {order.order_code}</p>
-                  <p><span className="font-semibold">Order Date:</span> {order.order_date}</p>
+                  <p><span className="font-semibold">Order Date:</span> {order.order_date ? new Date(order.order_date).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  }).replace(/ /g, '-') : '-'}</p>
                 </div>
               </div>
             </div>
