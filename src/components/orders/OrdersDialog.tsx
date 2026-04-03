@@ -12,9 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { ORDER_STATUSES, ORDER_STATUS_DISPLAY_NAMES } from '@/lib/constants';
 import type { Database } from '@/integrations/supabase/types';
-
+import { generateInvoiceNumber } from '@/lib/utils';
 import { getStockAllocationsByOrder, allocateProductStock } from '@/integrations/supabase/stock';
 import { OrderStockAllocationTab } from './OrderStockAllocationTab';
+
 // Predefined pouch sizes in grams (copied from WorkOrderProductsTab)
 const POUCH_SIZES = [50, 100, 125, 140, 150, 250, 500, 1000];
 
@@ -125,6 +126,26 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
 
   const queryClient = useQueryClient();
 
+  // Invoice prefix state
+  const [invoicePrefix, setInvoicePrefix] = useState('INV-');
+
+  // Fetch company params for invoice prefix
+  useQuery({
+    queryKey: ['company-params-invoice'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_params')
+        .select('value')
+        .eq('key', 'invoice_number_prefix')
+        .single();
+      
+      if (!error && data?.value) {
+        setInvoicePrefix(data.value);
+      }
+      return data;
+    },
+  });
+
   // --- Client Search for Details Tab ---
   const [clientSearch, setClientSearch] = useState('');
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
@@ -147,6 +168,12 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
   // --- Order Save Mutation ---
   const orderMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Generate invoice number for new orders
+      let invoiceNumber: string | null = null;
+      if (!order) {
+        invoiceNumber = await generateInvoiceNumber(invoicePrefix);
+      }
+
       // Prepare order data
       const orderData: Database['public']['Tables']['orders']['Insert'] = {
         order_code: data.order_code,
@@ -156,6 +183,7 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         client_id: data.client?.id,
         category_id: data.category?.id || null,
         status: data.status,
+        invoice_number: order ? undefined : invoiceNumber,
       };
       // Prepare order products data
       const orderProductsData: Database['public']['Tables']['order_products']['Insert'][] = (data.products || []).map(product => ({

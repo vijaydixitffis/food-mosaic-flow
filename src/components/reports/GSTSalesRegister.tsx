@@ -42,6 +42,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
 type GSTLineItem = {
   orderId: string;
   orderCode: string;
+  invoiceNumber: string;
   orderDate: string;
   clientName: string;
   clientGstNumber: string;
@@ -71,6 +72,7 @@ export function GSTSalesRegister({ startDate, endDate }: GSTSalesRegisterProps) 
         .from('orders')
         .select(`
           *,
+          invoice_number,
           clients (
             id,
             name,
@@ -210,6 +212,7 @@ export function GSTSalesRegister({ startDate, endDate }: GSTSalesRegisterProps) 
           consolidatedMap.set(consolidationKey, {
             orderId: order.id,
             orderCode: order.order_code,
+            invoiceNumber: order.invoice_number || order.order_code,
             orderDate: order.order_date || '',
             clientName: order.clients?.name || '',
             clientGstNumber: order.clients?.gst_number || '',
@@ -268,7 +271,7 @@ export function GSTSalesRegister({ startDate, endDate }: GSTSalesRegisterProps) 
     ];
 
     const rows = gstLineItems.map(item => [
-      item.orderCode,
+      item.invoiceNumber,
       item.orderDate,
       item.clientName,
       item.clientGstNumber,
@@ -416,7 +419,7 @@ export function GSTSalesRegister({ startDate, endDate }: GSTSalesRegisterProps) 
                 <TableBody>
                   {gstLineItems.map((item, index) => (
                     <TableRow key={`${item.orderId}-${index}`} className="hover:bg-gray-50">
-                      <TableCell className="font-mono text-sm">{item.orderCode}</TableCell>
+                      <TableCell className="font-mono text-sm">{item.invoiceNumber}</TableCell>
                       <TableCell className="text-sm">
                         {item.orderDate ? new Date(item.orderDate).toLocaleDateString('en-IN') : '-'}
                       </TableCell>

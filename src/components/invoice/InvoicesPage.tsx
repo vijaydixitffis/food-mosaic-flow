@@ -186,9 +186,20 @@ export function InvoicesPage() {
       return;
     }
 
+    // Check if order has an invoice number
+    if (!order.invoice_number) {
+      toast({
+        title: "No Invoice Number",
+        description: "This order does not have an invoice number assigned. Please edit the order to regenerate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedOrder(order);
-    setInvoiceNumber('');
-    setShowInvoiceNumberDialog(true);
+    setInvoiceNumber(order.invoice_number);
+    setShowInvoice(true);
+    setIsInvoiceOpen(true);
   };
 
   const handleInvoiceClose = () => {
@@ -198,12 +209,6 @@ export function InvoicesPage() {
     setShowInvoice(false);
   };
 
-  const handleInvoiceNumberSave = (number: string) => {
-    setInvoiceNumber(number);
-    setShowInvoiceNumberDialog(false);
-    setShowInvoice(true);
-    setIsInvoiceOpen(true);
-  };
 
   const calculateOrderTotal = (order: Order) => {
     const subtotal = order.order_products.reduce((total, item) => {
@@ -350,13 +355,13 @@ export function InvoicesPage() {
         />
       )}
 
-      {/* Invoice Number Dialog */}
-      <InvoiceNumberDialog
+      {/* Invoice Number Dialog - Removed, using pre-generated invoice number */}
+      {/* <InvoiceNumberDialog
         isOpen={showInvoiceNumberDialog}
         onClose={() => setShowInvoiceNumberDialog(false)}
         onSave={handleInvoiceNumberSave}
         initialValue={invoiceNumber}
-      />
+      /> */}
     </div>
   );
 } 

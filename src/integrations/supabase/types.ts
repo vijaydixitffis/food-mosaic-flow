@@ -217,6 +217,7 @@ export interface Database {
           client_id: string
           category_id: string
           status: string
+          invoice_number: string | null
           created_at: string
           updated_at: string
         }
@@ -229,6 +230,7 @@ export interface Database {
           client_id: string
           category_id: string
           status: string
+          invoice_number?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -241,6 +243,8 @@ export interface Database {
           client_id?: string
           category_id?: string
           status?: string
+          invoice_number?: string | null
+          created_at?: string
           updated_at?: string
         }
         Relationships: []

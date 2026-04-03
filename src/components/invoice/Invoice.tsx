@@ -106,13 +106,13 @@ export function Invoice({
     return `${invoiceNumberPrefix}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
   }, [invoiceNumberPrefix]);
 
-  // Get the full invoice number (prefix + user number)
+  // Get the full invoice number (already includes prefix from DB)
   const fullInvoiceNumber = useMemo(() => {
     if (localInvoiceNumber) {
-      return `${invoiceNumberPrefix}${localInvoiceNumber}`;
+      return localInvoiceNumber;  // Already includes full prefix
     }
     return defaultInvoiceNumber;
-  }, [localInvoiceNumber, invoiceNumberPrefix, defaultInvoiceNumber]);
+  }, [localInvoiceNumber, defaultInvoiceNumber]);
 
   const handleInvoiceNumberSave = (number: string) => {
     setLocalInvoiceNumber(number);

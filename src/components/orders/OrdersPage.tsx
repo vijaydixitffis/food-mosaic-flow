@@ -346,7 +346,7 @@ export function OrdersPage() {
     setDeliveryChallanNumber('');
   };
 
-  const handleGenerateInvoice = (order: Order) => {
+  const handleGenerateInvoice = async (order: Order) => {
     if (isStaff) {
       toast({
         title: "Access Restricted",
@@ -366,9 +366,53 @@ export function OrdersPage() {
       return;
     }
 
+    let invoiceNumber = order.invoice_number;
+
+    // If order doesn't have invoice number, generate one
+    if (!invoiceNumber) {
+      try {
+        const { data: companyParam } = await supabase
+          .from('company_params')
+          .select('value')
+          .eq('key', 'invoice_number_prefix')
+          .single();
+        
+        const prefix = companyParam?.value || 'INV-';
+        invoiceNumber = await generateInvoiceNumber(prefix);
+        
+        // Save the invoice number to the order
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ invoice_number: invoiceNumber })
+          .eq('id', order.id);
+        
+        if (updateError) {
+          console.error('Failed to save invoice number:', updateError);
+          toast({
+            title: "Error",
+            description: "Failed to generate invoice number",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Update local order object with new invoice number
+        order.invoice_number = invoiceNumber;
+      } catch (error) {
+        console.error('Error generating invoice number:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate invoice number",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSelectedOrderForInvoice(order);
-    setInvoiceNumber('');
-    setShowInvoiceNumberDialog(true);
+    setInvoiceNumber(invoiceNumber);
+    setShowInvoice(true);
+    setIsInvoiceOpen(true);
   };
 
   const handleInvoiceClose = () => {
@@ -378,12 +422,6 @@ export function OrdersPage() {
     setShowInvoice(false);
   };
 
-  const handleInvoiceNumberSave = (number: string) => {
-    setInvoiceNumber(number);
-    setShowInvoiceNumberDialog(false);
-    setShowInvoice(true);
-    setIsInvoiceOpen(true);
-  };
 
   const handleDeliveryChallanNumberSave = (number: string) => {
     setDeliveryChallanNumber(number);
@@ -490,13 +528,13 @@ export function OrdersPage() {
         />
       )}
 
-      {/* Invoice Number Dialog */}
-      <InvoiceNumberDialog
+      {/* Invoice Number Dialog - Removed, using pre-generated invoice number */}
+      {/* <InvoiceNumberDialog
         isOpen={showInvoiceNumberDialog}
         onClose={() => setShowInvoiceNumberDialog(false)}
         onSave={handleInvoiceNumberSave}
         initialValue={invoiceNumber}
-      />
+      /> */}
 
       {/* Delivery Challan Dialog */}
       {selectedOrderForDeliveryChallan && (
