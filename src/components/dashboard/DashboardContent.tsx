@@ -438,7 +438,7 @@ export function DashboardContent({ currentView, onViewChange }: DashboardContent
                 <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <ChartColumn className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-3xl font-bold text-emerald-500">12</span>
+                <span className="text-3xl font-bold text-emerald-500">4</span>
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">Reports</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-6">
