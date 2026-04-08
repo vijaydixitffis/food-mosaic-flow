@@ -236,6 +236,25 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         title: 'Success',
         description: order ? 'Order updated successfully' : 'Order created successfully',
       });
+      // Reset form data after creating new order
+      if (!order) {
+        setFormData({
+          order_code: '',
+          remarks: '',
+          order_date: '',
+          target_delivery_date: '',
+          client: null,
+          category: null,
+          products: [],
+          status: ORDER_STATUSES.NEW,
+        });
+        setClientSearch('');
+        setSelectedProductId('');
+        setSelectedPouchSize('');
+        setNumberOfPouches('');
+        setProductSearch('');
+        setTab('details');
+      }
       onSuccess();
     },
     onError: (error) => {

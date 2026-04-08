@@ -7,44 +7,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Generates the next invoice number with financial year based sequence
- * Format: {prefix}{FY-START-FY-END}-{sequence} (e.g., INV-2026-2027-0100)
- * Sequence starts at 100 and resets at the beginning of each financial year (April 1)
+ * Generates the next invoice number by appending sequence to prefix
+ * Format: {prefix}{sequence} (e.g., MF/26-27/0101)
+ * Prefix should already contain FY from company_params (e.g., "MF/26-27/")
+ * Sequence starts at 100 and resets when FY prefix changes
  * 
- * @param prefix - The invoice prefix from company params (e.g., "INV-")
+ * @param prefix - The invoice prefix from company params (e.g., "MF/26-27/")
  * @returns Promise<string> - The generated invoice number
  */
 export async function generateInvoiceNumber(prefix: string = 'INV-'): Promise<string> {
-  // Determine current financial year
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1; // 1-12
-  const currentYear = now.getFullYear();
-  
-  // Financial year: April 1 to March 31
-  // If current month is Jan-Mar, FY is (previousYear)-(currentYear)
-  // If current month is Apr-Dec, FY is (currentYear)-(nextYear)
-  let fyStart: number;
-  let fyEnd: number;
-  
-  if (currentMonth >= 4) {
-    // April to December: FY is currentYear-nextYear
-    fyStart = currentYear;
-    fyEnd = currentYear + 1;
-  } else {
-    // January to March: FY is (currentYear-1)-currentYear
-    fyStart = currentYear - 1;
-    fyEnd = currentYear;
-  }
-  
-  const financialYearSuffix = `${fyStart}-${fyEnd}`;
-  const fullPrefix = `${prefix}${financialYearSuffix}-`;
-  
-  // Get the highest existing invoice number for this financial year
+  // Get the highest existing invoice number for this prefix
   const { data: existingOrders, error } = await supabase
     .from('orders')
     .select('invoice_number')
     .not('invoice_number', 'is', null)
-    .ilike('invoice_number', `${fullPrefix}%`)
+    .ilike('invoice_number', `${prefix}%`)
     .order('invoice_number', { ascending: false })
     .limit(1);
 
@@ -56,11 +33,11 @@ export async function generateInvoiceNumber(prefix: string = 'INV-'): Promise<st
   let nextSequence = 100; // Start at 100 for new financial year
 
   if (existingOrders && existingOrders.length > 0 && existingOrders[0].invoice_number) {
-    // Extract the numeric part after the full prefix
+    // Extract the numeric part after the prefix
     const lastInvoiceNumber = existingOrders[0].invoice_number;
-    const numericPart = lastInvoiceNumber.replace(fullPrefix, '');
+    const numericPart = lastInvoiceNumber.replace(prefix, '');
     const lastSequence = parseInt(numericPart, 10);
-    
+
     if (!isNaN(lastSequence)) {
       nextSequence = lastSequence + 1;
     }
@@ -68,5 +45,5 @@ export async function generateInvoiceNumber(prefix: string = 'INV-'): Promise<st
 
   // Format with 4-digit padding (e.g., 0100, 0101, 0200, etc.)
   const sequenceString = String(nextSequence).padStart(4, '0');
-  return `${fullPrefix}${sequenceString}`;
+  return `${prefix}${sequenceString}`;
 }
