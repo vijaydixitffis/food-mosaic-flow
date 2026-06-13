@@ -62,7 +62,8 @@ export function InvoicesPage() {
   const [showInvoiceNumberDialog, setShowInvoiceNumberDialog] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const { toast } = useToast();
-  const { isStaff } = useAuth();
+  const { canEditView } = useAuth();
+  const isReadOnly = !canEditView('invoices');
 
   // Fetch orders for search
   const { data: ordersData, isLoading } = useQuery({
@@ -167,7 +168,7 @@ export function InvoicesPage() {
   ) || [];
 
   const handleInvoice = (order: Order) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view invoices",

@@ -94,7 +94,7 @@ export function WorkOrderDialog({
     name: '',
     description: '',
     remarks: '',
-    status: 'draft',
+    status: 'CREATED',
     products: [],
   });
   const { toast } = useToast();
@@ -301,7 +301,7 @@ export function WorkOrderDialog({
         name: '',
         description: '',
         remarks: '',
-        status: 'draft',
+        status: 'CREATED',
         products: [],
       });
     }

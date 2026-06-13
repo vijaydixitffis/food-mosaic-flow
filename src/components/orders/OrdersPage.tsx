@@ -64,7 +64,6 @@ export function OrdersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [isReadOnly, setIsReadOnly] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -79,13 +78,13 @@ export function OrdersPage() {
   const [showDeliveryChallan, setShowDeliveryChallan] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { canEditView, user, profile } = useAuth();
+  const isReadOnly = !canEditView('orders');
 
   console.log('OrdersPage - Auth Debug:', {
     user: user?.id,
     profile: profile?.role,
-    isStaff,
-    isAdmin,
+    isReadOnly,
     userEmail: user?.email
   });
 
@@ -274,7 +273,7 @@ export function OrdersPage() {
   });
 
   const handleAddOrder = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view orders",
@@ -283,12 +282,11 @@ export function OrdersPage() {
       return;
     }
     setEditingOrder(null);
-    setIsReadOnly(false);
     setIsDialogOpen(true);
   };
 
   const handleEditOrder = async (order: Order) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view orders",
@@ -297,12 +295,11 @@ export function OrdersPage() {
       return;
     }
     setEditingOrder(order);
-    setIsReadOnly(false);
     setIsDialogOpen(true);
   };
 
   const handleToggleOrderStatus = (orderId: string, currentStatus: string) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view orders",
@@ -316,7 +313,7 @@ export function OrdersPage() {
   };
 
   const handleGenerateDeliveryChallan = (order: Order) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view orders",
@@ -347,7 +344,7 @@ export function OrdersPage() {
   };
 
   const handleGenerateInvoice = async (order: Order) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view orders",
@@ -451,7 +448,7 @@ export function OrdersPage() {
             <p className="text-slate-600">Manage client orders and track fulfillment</p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('orders') && (
           <Button onClick={handleAddOrder} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Order
@@ -494,7 +491,7 @@ export function OrdersPage() {
           onGenerateInvoice={handleGenerateInvoice}
           onGenerateDeliveryChallan={handleGenerateDeliveryChallan}
           isReadOnly={isReadOnly}
-          isStaff={isStaff}
+          isReadOnly={isReadOnly}
         />
       </div>
 

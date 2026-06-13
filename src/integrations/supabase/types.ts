@@ -420,7 +420,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      work_order_status: 'draft' | 'in_progress' | 'completed' | 'cancelled'
+      work_order_status: 'CREATED' | 'PROCURE' | 'IN-STOCK' | 'READY' | 'PROCESSED' | 'EXECUTED' | 'COMPLETE'
     }
     CompositeTypes: {
       [_ in never]: never

@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { WorkOrdersTable } from './WorkOrdersTable';
 import { WorkOrderDialog } from './WorkOrderDialog';
 import { DeliveryDialog } from './DeliveryDialog';
+import { WorkOrderCompleteDialog } from './WorkOrderCompleteDialog';
 import { WorkOrdersPagination } from './WorkOrdersPagination';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { getRequiredIngredientsForWorkOrder } from '@/integrations/supabase/stock';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
@@ -28,23 +30,36 @@ type WorkOrderWithProducts = WorkOrder & {
   }>;
 };
 
+const NEXT_STATUS: Partial<Record<WorkOrderStatus, WorkOrderStatus>> = {
+  PROCURE:   'IN-STOCK',
+  'IN-STOCK':'READY',
+  READY:     'PROCESSED',
+  EXECUTED:  'COMPLETE',
+  // CREATED → auto-check ingredients (not a fixed next status)
+  // PROCESSED → intercepted (opens WorkOrderCompleteDialog for batch + stock)
+};
+
 export function WorkOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isCheckingIngredients, setIsCheckingIngredients] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrderWithProducts | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrderWithProducts | null>(null);
+  const [completingWorkOrder, setCompletingWorkOrder] = useState<WorkOrderWithProducts | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { canEditView, user, profile } = useAuth();
+  const isReadOnly = !canEditView('work-orders');
+  const canMarkComplete = profile?.role === 'admin' || profile?.role === 'supervisor';
 
   console.log('WorkOrdersPage - Auth Debug:', {
     user: user?.id,
     profile: profile?.role,
-    isStaff,
-    isAdmin,
+    isReadOnly,
     userEmail: user?.email
   });
 
@@ -82,7 +97,7 @@ export function WorkOrdersPage() {
         }
 
         console.log('WorkOrdersPage - About to execute count query');
-        
+
         // Get total count for pagination
         let countQuery = supabase
           .from('work_orders')
@@ -176,7 +191,7 @@ export function WorkOrdersPage() {
     },
   });
 
-  // Update status mutation
+  // Update status mutation (for direct advances, not the COMPLETE transition)
   const updateStatusMutation = useMutation({
     mutationFn: async ({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) => {
       const { error } = await supabase
@@ -203,7 +218,7 @@ export function WorkOrdersPage() {
   });
 
   const handleAddWorkOrder = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view work orders",
@@ -216,7 +231,7 @@ export function WorkOrdersPage() {
   };
 
   const handleEditWorkOrder = (workOrder: WorkOrderWithProducts) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view work orders",
@@ -229,7 +244,7 @@ export function WorkOrdersPage() {
   };
 
   const handleDeleteWorkOrder = (workOrderId: string) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view work orders",
@@ -242,8 +257,8 @@ export function WorkOrdersPage() {
     }
   };
 
-  const handleUpdateStatus = (workOrderId: string, status: string) => {
-    if (isStaff) {
+  const handleAdvanceStatus = async (workOrder: WorkOrderWithProducts) => {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view work orders",
@@ -251,7 +266,41 @@ export function WorkOrdersPage() {
       });
       return;
     }
-    updateStatusMutation.mutate({ workOrderId, status: status as WorkOrderStatus });
+
+    const status = workOrder.status as WorkOrderStatus;
+
+    if (status === 'CREATED') {
+      setIsCheckingIngredients(true);
+      const { data: ingredients } = await getRequiredIngredientsForWorkOrder(workOrder.id);
+      setIsCheckingIngredients(false);
+
+      const insufficient = (ingredients || []).filter(
+        (ing) => ing.current_stock < ing.required_quantity
+      );
+      if (insufficient.length === 0) {
+        updateStatusMutation.mutate({ workOrderId: workOrder.id, status: 'IN-STOCK' });
+        toast({ title: 'All ingredients available', description: 'Work order moved to IN-STOCK.' });
+      } else {
+        updateStatusMutation.mutate({ workOrderId: workOrder.id, status: 'PROCURE' });
+        toast({
+          title: 'Ingredients insufficient — moved to PROCURE',
+          description: `Short: ${insufficient.map((i) => i.name).join(', ')}`,
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
+    if (status === 'PROCESSED') {
+      setCompletingWorkOrder(workOrder);
+      setIsCompleteDialogOpen(true);
+      return;
+    }
+
+    const nextStatus = NEXT_STATUS[status];
+    if (nextStatus) {
+      updateStatusMutation.mutate({ workOrderId: workOrder.id, status: nextStatus });
+    }
   };
 
   const handleViewDelivery = (workOrder: WorkOrderWithProducts) => {
@@ -284,7 +333,7 @@ export function WorkOrdersPage() {
             <p className="text-slate-600">Create and manage production work orders</p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('work-orders') && (
           <Button onClick={handleAddWorkOrder} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Work Order
@@ -320,12 +369,13 @@ export function WorkOrdersPage() {
       {/* Work Orders Table */}
       <WorkOrdersTable
         workOrders={workOrders}
-        isLoading={isLoading}
+        isLoading={isLoading || isCheckingIngredients}
         onEdit={handleEditWorkOrder}
         onDelete={handleDeleteWorkOrder}
-        onUpdateStatus={handleUpdateStatus}
+        onAdvanceStatus={handleAdvanceStatus}
         onViewDelivery={handleViewDelivery}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
+        canMarkComplete={canMarkComplete}
       />
 
       {/* Pagination */}
@@ -347,7 +397,7 @@ export function WorkOrdersPage() {
           queryClient.invalidateQueries({ queryKey: ['work-orders'] });
           setIsDialogOpen(false);
         }}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       {/* Delivery Dialog */}
@@ -373,7 +423,25 @@ export function WorkOrdersPage() {
             queryClient.invalidateQueries({ queryKey: ['work-orders'] });
             setIsDeliveryDialogOpen(false);
           }}
-          isReadOnly={isStaff}
+          isReadOnly={isReadOnly}
+        />
+      )}
+
+      {/* Work Order Complete Dialog */}
+      {completingWorkOrder && (
+        <WorkOrderCompleteDialog
+          isOpen={isCompleteDialogOpen}
+          onClose={() => {
+            setIsCompleteDialogOpen(false);
+            setCompletingWorkOrder(null);
+          }}
+          workOrder={completingWorkOrder}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+            setIsCompleteDialogOpen(false);
+            setCompletingWorkOrder(null);
+          }}
+          isReadOnly={isReadOnly}
         />
       )}
     </div>

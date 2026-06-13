@@ -17,7 +17,8 @@ type Recipe = Database['public']['Tables']['recipes']['Row'];
 const RECIPES_PER_PAGE = 10;
 
 export function RecipesPage() {
-  const { isAdmin, isStaff, user, profile } = useAuth();
+  const { canEditView, user, profile } = useAuth();
+  const isReadOnly = !canEditView('recipes');
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,8 +30,7 @@ export function RecipesPage() {
   console.log('RecipesPage - Auth Debug:', {
     user: user?.id,
     profile: profile?.role,
-    isStaff,
-    isAdmin,
+    isReadOnly,
     userEmail: user?.email
   });
 
@@ -170,7 +170,7 @@ export function RecipesPage() {
   });
 
   const handleCreateRecipe = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view recipes",
@@ -183,7 +183,7 @@ export function RecipesPage() {
   };
 
   const handleEditRecipe = (recipe: Recipe) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view recipes",
@@ -218,14 +218,14 @@ export function RecipesPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? 'View Recipes' : 'Manage Recipes'}
+              {isReadOnly ? 'View Recipes' : 'Manage Recipes'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isStaff ? 'View recipe information' : 'Create and manage recipe information'}
+              {isReadOnly ? 'View recipe information' : 'Create and manage recipe information'}
             </p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('recipes') && (
           <Button onClick={handleCreateRecipe} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Recipe
@@ -263,7 +263,7 @@ export function RecipesPage() {
         recipes={recipes}
         onEdit={handleEditRecipe}
         onRefresh={() => queryClient.invalidateQueries({ queryKey: ['recipes'] })}
-        isAdmin={!isStaff}
+        isAdmin={canEditView('recipes')}
       />
 
       {/* Pagination */}
@@ -278,7 +278,7 @@ export function RecipesPage() {
         recipe={editingRecipe}
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

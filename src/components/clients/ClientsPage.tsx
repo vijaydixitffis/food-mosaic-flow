@@ -23,14 +23,14 @@ export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const { toast } = useToast();
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { canEditView, user, profile } = useAuth();
+  const isReadOnly = !canEditView('clients');
   const queryClient = useQueryClient();
 
   console.log('ClientsPage - Auth Debug:', {
     user: user?.id,
     profile: profile?.role,
-    isStaff,
-    isAdmin,
+    isReadOnly,
     userEmail: user?.email
   });
 
@@ -210,7 +210,7 @@ export function ClientsPage() {
   });
 
   const handleAddClient = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view clients",
@@ -223,7 +223,7 @@ export function ClientsPage() {
   };
 
   const handleEditClient = (client: Client) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view clients",
@@ -236,7 +236,7 @@ export function ClientsPage() {
   };
 
   const handleToggleActive = (clientId: string, currentActive: boolean) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view clients",
@@ -271,14 +271,14 @@ export function ClientsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? 'View Clients' : 'Manage Clients'}
+              {isReadOnly ? 'View Clients' : 'Manage Clients'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isStaff ? 'View client information' : 'Create and manage client information'}
+              {isReadOnly ? 'View client information' : 'Create and manage client information'}
             </p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('clients') && (
           <Button onClick={handleAddClient} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Client
@@ -317,7 +317,7 @@ export function ClientsPage() {
         isLoading={isLoading}
         onEdit={handleEditClient}
         onToggleActive={handleToggleActive}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       {/* Pagination */}
@@ -338,7 +338,7 @@ export function ClientsPage() {
         onClose={() => setIsDialogOpen(false)}
         client={editingClient}
         onSuccess={handleSubmit}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

@@ -26,10 +26,10 @@ interface WorkOrderBasicInfoTabProps {
 
 const statusOptions: WorkOrderStatus[] = [
   'CREATED',
-  'PROCURED',
+  'PROCURE',
   'IN-STOCK',
+  'READY',
   'PROCESSED',
-  'SHIPPED',
   'EXECUTED',
   'COMPLETE',
 ];

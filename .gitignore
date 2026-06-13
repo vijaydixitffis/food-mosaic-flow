@@ -25,3 +25,6 @@ dist-ssr
 
 # Ignore environment variable files
 .env*
+
+# Claude Code local settings (may contain tokens/secrets)
+.claude/

@@ -18,10 +18,11 @@ export function CategoriesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [isDialogReadOnly, setIsDialogReadOnly] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin } = useAuth();
+  const { canEditView } = useAuth();
+  const isReadOnly = !canEditView('categories');
 
   // Fetch categories
   const { data: categoriesData, isLoading, error } = useQuery({
@@ -110,7 +111,7 @@ export function CategoriesPage() {
   });
 
   const handleAddCategory = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view categories",
@@ -119,12 +120,12 @@ export function CategoriesPage() {
       return;
     }
     setEditingCategory(null);
-    setIsReadOnly(false);
+    setIsDialogReadOnly(false);
     setIsDialogOpen(true);
   };
 
   const handleEditCategory = (category: Category) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view categories",
@@ -133,13 +134,13 @@ export function CategoriesPage() {
       return;
     }
     setEditingCategory(category);
-    setIsReadOnly(false);
+    setIsDialogReadOnly(false);
     setIsDialogOpen(true);
   };
 
   const handleViewCategory = (category: Category) => {
     setEditingCategory(category);
-    setIsReadOnly(true);
+    setIsDialogReadOnly(true);
     setIsDialogOpen(true);
   };
 
@@ -167,7 +168,7 @@ export function CategoriesPage() {
             <p className="text-slate-600">Manage product and order categories</p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('categories') && (
           <Button onClick={handleAddCategory} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Category
@@ -201,7 +202,7 @@ export function CategoriesPage() {
           isLoading={isLoading}
           onEdit={handleEditCategory}
           onView={handleViewCategory}
-          isReadOnly={isStaff}
+          isReadOnly={isReadOnly}
         />
       </div>
 
@@ -241,7 +242,7 @@ export function CategoriesPage() {
         onClose={() => setIsDialogOpen(false)}
         category={editingCategory}
         onSuccess={handleDialogSuccess}
-        isReadOnly={isReadOnly}
+        isReadOnly={isReadOnly || isDialogReadOnly}
       />
     </div>
   );

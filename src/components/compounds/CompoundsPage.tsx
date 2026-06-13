@@ -35,7 +35,8 @@ export function CompoundsPage() {
   const [editingCompound, setEditingCompound] = useState<CompoundWithIngredients | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin, isStaff } = useAuth();
+  const { canEditView } = useAuth();
+  const canEdit = canEditView('compounds');
 
   // Fetch compounds with their ingredients
   const { data: compoundsData, isLoading, error } = useQuery({
@@ -151,10 +152,10 @@ export function CompoundsPage() {
   });
 
   const handleAddCompound = () => {
-    if (!isAdmin) {
+    if (!canEdit) {
       toast({
         title: "Access Denied",
-        description: isStaff ? "You can only view compounds" : "Only admin users can add compounds",
+        description: "You don't have permission to add compounds",
         variant: "destructive",
       });
       return;
@@ -164,10 +165,10 @@ export function CompoundsPage() {
   };
 
   const handleEditCompound = (compound: CompoundWithIngredients) => {
-    if (!isAdmin) {
+    if (!canEdit) {
       toast({
         title: "Access Denied",
-        description: isStaff ? "You can only view compounds" : "Only admin users can edit compounds",
+        description: "You don't have permission to edit compounds",
         variant: "destructive",
       });
       return;
@@ -177,10 +178,10 @@ export function CompoundsPage() {
   };
 
   const handleDeleteCompound = (compoundId: string) => {
-    if (!isAdmin) {
+    if (!canEdit) {
       toast({
         title: "Access Denied",
-        description: isStaff ? "You can only view compounds" : "Only admin users can delete compounds",
+        description: "You don't have permission to delete compounds",
         variant: "destructive",
       });
       return;
@@ -191,10 +192,10 @@ export function CompoundsPage() {
   };
 
   const handleToggleActive = (compoundId: string, currentActive: boolean) => {
-    if (!isAdmin) {
+    if (!canEdit) {
       toast({
         title: "Access Denied",
-        description: isStaff ? "You can only view compounds" : "Only admin users can change compound status",
+        description: "You don't have permission to change compound status",
         variant: "destructive",
       });
       return;
@@ -229,14 +230,14 @@ export function CompoundsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? 'View Compounds' : 'Manage Compounds'}
+              {!canEdit ? 'View Compounds' : 'Manage Compounds'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isStaff ? 'View compound information' : 'Create and manage compound information'}
+              {!canEdit ? 'View compound information' : 'Create and manage compound information'}
             </p>
           </div>
         </div>
-        {!isStaff && (
+        {canEdit && (
           <Button onClick={handleAddCompound} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Compound
@@ -270,7 +271,7 @@ export function CompoundsPage() {
         onEdit={handleEditCompound}
         onDelete={handleDeleteCompound}
         onToggleActive={handleToggleActive}
-        isAdmin={!isStaff}
+        isAdmin={canEdit}
       />
 
       {/* Pagination */}

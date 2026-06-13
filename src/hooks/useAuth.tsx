@@ -2,15 +2,24 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+type UserRole = 'admin' | 'supervisor' | 'staff';
+
 interface Profile {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'staff';
+  role: UserRole;
   active: boolean;
   created_at: string;
   updated_at: string;
 }
+
+// Views accessible per role (sidebar menu + routing guard)
+const VIEW_ACCESS: Record<UserRole, string[]> = {
+  admin:      ['home','ingredients','compounds','products','recipes','clients','categories','orders','work-orders','invoices','reports','settings','backup'],
+  supervisor: ['home','ingredients','compounds','products','recipes','work-orders'],
+  staff:      ['home','work-orders'],
+};
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +28,11 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isSupervisor: boolean;
   isStaff: boolean;
+  canAccessView: (view: string) => boolean;
+  canEditView: (view: string) => boolean;
+  canUpdateStock: boolean;
   error: string | null;
   retryAuth: () => void;
 }
@@ -31,9 +44,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false); // NEW: track if initial session check is done
+  const [initialized, setInitialized] = useState(false);
 
-  // Mounted flag to prevent state updates after unmount
   useEffect(() => {
     let mounted = true;
     return () => {
@@ -47,7 +59,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getInitialSession();
   };
 
-  // Improved fetchProfile with better error handling and loading management
   const fetchProfile = async (userId: string) => {
     if (!userId) {
       console.error('No userId provided to fetchProfile!');
@@ -82,7 +93,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Initial session check, only runs once
   const getInitialSession = async () => {
     try {
       console.log('[getInitialSession] Checking for existing session...');
@@ -91,7 +101,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session.user);
         const profileSuccess = await fetchProfile(session.user.id);
         if (!profileSuccess) {
-          // Profile fetch failed, force sign out
           console.warn('[getInitialSession] Profile fetch failed, signing out.');
           await supabase.auth.signOut();
           setUser(null);
@@ -117,15 +126,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
-    // Initial session check
     getInitialSession();
 
-    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         console.log('[onAuthStateChange] Event:', event, 'Session:', session);
-        // Only handle events after initial session check is done
         if (!initialized) {
           console.log('[onAuthStateChange] Ignored because not initialized');
           return;
@@ -145,7 +151,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-    // Only run on mount/unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized]);
 
@@ -165,7 +170,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (data.user) {
         console.log('User returned from signIn:', data.user);
-        // Check if user has a profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -198,7 +202,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setProfile(null);
   };
 
-  const value = {
+  const role = profile?.role ?? 'staff';
+
+  const canAccessView = (view: string): boolean =>
+    VIEW_ACCESS[role]?.includes(view) ?? false;
+
+  // Same matrix: if you can see a view, you can fully edit it
+  const canEditView = (view: string): boolean => canAccessView(view);
+
+  // All authenticated active users can trigger stock updates (Staff via Work Orders)
+  const canUpdateStock = !!profile?.active;
+
+  const value: AuthContextType = {
     user,
     profile,
     loading,
@@ -206,8 +221,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     retryAuth,
     signIn,
     signOut,
-    isAdmin: profile?.role === 'admin',
-    isStaff: profile?.role === 'staff',
+    isAdmin: role === 'admin',
+    isSupervisor: role === 'supervisor',
+    isStaff: role === 'staff',
+    canAccessView,
+    canEditView,
+    canUpdateStock,
   };
 
   console.log('AuthProvider rendering with value:', value);

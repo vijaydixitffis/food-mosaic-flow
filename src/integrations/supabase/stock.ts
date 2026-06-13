@@ -43,6 +43,9 @@ interface StockAllocation {
   reference_id: string | null;
   quantity_allocated: number;
   allocation_date: string;
+  batch_number?: string | null;
+  mfg_date?: string | null;
+  expiry_date?: string | null;
 }
 
 export type StockAllocationType = StockAllocation;
@@ -73,18 +76,18 @@ export async function addIngredientStock(data: {
   const currentStock = currentIngredient?.current_stock || 0;
   const newStock = currentStock + data.quantity;
 
-  // Start a transaction to update ingredient and create stock allocation record
-  const { data: updatedIngredient, error: updateError } = await supabase
-    .from('ingredients')
-    .update({ current_stock: newStock })
-    .eq('id', data.ingredient_id)
-    .select()
-    .single();
+  // Use security-definer RPC so Staff can update stock without direct table UPDATE access
+  const { error: updateError } = await supabase.rpc('fn_update_ingredient_stock', {
+    p_ingredient_id: data.ingredient_id,
+    p_new_stock: newStock,
+  });
 
   if (updateError) {
     console.error('Error updating ingredient stock:', updateError);
     return { data: null, error: updateError };
   }
+
+  const updatedIngredient = { id: data.ingredient_id, current_stock: newStock };
 
   // Create INWARD stock allocation record
   const { data: allocationData, error: allocationError } = await supabase
@@ -120,6 +123,9 @@ export async function addProductStock(data: {
   category_id: string;
   quantity: number;
   reference_id?: string;
+  batch_number?: string;
+  mfg_date?: string;
+  expiry_date?: string;
 }) {
   console.log('addProductStock called with:', data);
   
@@ -150,18 +156,18 @@ export async function addProductStock(data: {
   const currentStock = productPrice?.stock || 0;
   const newStock = currentStock + data.quantity;
 
-  // Update product_prices stock
-  const { data: updatedProductPrice, error: updateError } = await supabase
-    .from('product_prices')
-    .update({ stock: newStock })
-    .eq('id', productPrice.id)
-    .select()
-    .single();
+  // Use security-definer RPC so Staff can update stock without direct table UPDATE access
+  const { error: updateError } = await supabase.rpc('fn_update_product_price_stock', {
+    p_product_price_id: productPrice.id,
+    p_new_stock: newStock,
+  });
 
   if (updateError) {
     console.error('Error updating product price stock:', updateError);
     return { data: null, error: updateError };
   }
+
+  const updatedProductPrice = { id: productPrice.id, stock: newStock };
 
   // Create INWARD stock allocation record using product_prices.id as stock_item_id
   console.log('Creating stock allocation with:', {
@@ -179,7 +185,10 @@ export async function addProductStock(data: {
       stock_type: 'PRODUCT',
       stock_item_id: productPrice.id, // Using product_prices primary key
       reference_id: data.reference_id || null,
-      quantity_allocated: data.quantity
+      quantity_allocated: data.quantity,
+      batch_number: data.batch_number || null,
+      mfg_date: data.mfg_date || null,
+      expiry_date: data.expiry_date || null,
     }])
     .select()
     .single() as { data: StockAllocation | null; error: any };
@@ -202,11 +211,14 @@ export async function addProductStock(data: {
  * @param data - The allocation data (productId, orderId, quantity).
  * @returns The result of the operation or an error.
  */
-export async function allocateProductStock(data: { 
-  productId: string; 
+export async function allocateProductStock(data: {
+  productId: string;
   categoryId: string;
-  orderId: string; 
-  quantity: number 
+  orderId: string;
+  quantity: number;
+  batch_number?: string;
+  mfg_date?: string;
+  expiry_date?: string;
 }) {
   const { productId, categoryId, orderId, quantity } = data;
 
@@ -236,7 +248,10 @@ export async function allocateProductStock(data: {
         stock_type: 'PRODUCT',
         stock_item_id: productPrice.id, // Using product_prices primary key
         reference_id: orderId,
-        quantity_allocated: quantity
+        quantity_allocated: quantity,
+        batch_number: data.batch_number || null,
+        mfg_date: data.mfg_date || null,
+        expiry_date: data.expiry_date || null,
       }])
       .select()
       .single() as { data: StockAllocation | null; error: any };
@@ -246,12 +261,12 @@ export async function allocateProductStock(data: {
       throw allocationError;
     }
 
-    // 3. Update product_prices stock (reduce by allocated quantity)
+    // 3. Update product_prices stock via security-definer RPC
     const newStock = (productPrice.stock || 0) - quantity;
-    const { error: updateError } = await supabase
-      .from('product_prices')
-      .update({ stock: newStock })
-      .eq('id', productPrice.id);
+    const { error: updateError } = await supabase.rpc('fn_update_product_price_stock', {
+      p_product_price_id: productPrice.id,
+      p_new_stock: newStock,
+    });
 
     if (updateError) {
       console.error('Error updating product price stock after allocation:', updateError);
@@ -345,12 +360,12 @@ export async function allocateIngredientStock(data: { ingredientId: string; work
       throw allocationError;
     }
 
-    // 3. Update ingredient current_stock (reduce by allocated quantity)
+    // 3. Update ingredient current_stock via security-definer RPC
     const newStock = (ingredient.current_stock || 0) - quantity;
-    const { error: updateError } = await supabase
-      .from('ingredients')
-      .update({ current_stock: newStock })
-      .eq('id', ingredientId);
+    const { error: updateError } = await supabase.rpc('fn_update_ingredient_stock', {
+      p_ingredient_id: ingredientId,
+      p_new_stock: newStock,
+    });
 
     if (updateError) {
       console.error('Error updating ingredient stock after allocation:', updateError);

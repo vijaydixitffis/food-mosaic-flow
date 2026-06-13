@@ -370,18 +370,33 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
 
   // --- Handle Product Stock Allocation ---
   const allocateMutation = useMutation({
-    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number }) => {
+    mutationFn: async ({
+      productId,
+      quantity,
+      batchNumber,
+      mfgDate,
+      expiryDate,
+    }: {
+      productId: string;
+      quantity: number;
+      batchNumber?: string;
+      mfgDate?: string;
+      expiryDate?: string;
+    }) => {
       if (!order?.id) {
         throw new Error('Cannot allocate stock without an order ID.');
       }
       if (!formData.category?.id) {
         throw new Error('Cannot allocate stock without an order category.');
       }
-      await allocateProductStock({ 
-        productId, 
-        categoryId: formData.category.id, 
-        orderId: order.id, 
-        quantity 
+      await allocateProductStock({
+        productId,
+        categoryId: formData.category.id,
+        orderId: order.id,
+        quantity,
+        batch_number: batchNumber,
+        mfg_date: mfgDate,
+        expiry_date: expiryDate,
       });
     },
     onSuccess: () => {
@@ -399,16 +414,17 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
         description: `Failed to allocate product stock: ${error.message}`,
         variant: 'destructive',
       });
-    }});
+    },
+  });
 
-  const handleAllocateStock = (productId: string, quantity: number) => {
-    console.log('=== PARENT ALLOCATE STOCK DEBUG ===');
-    console.log('ProductId:', productId);
-    console.log('Quantity:', quantity);
-    console.log('Order ID:', order?.id);
-    console.log('Form category:', formData.category);
-    
-    allocateMutation.mutate({ productId, quantity });
+  const handleAllocateStock = (
+    productId: string,
+    quantity: number,
+    batchNumber?: string,
+    mfgDate?: string,
+    expiryDate?: string
+  ) => {
+    allocateMutation.mutate({ productId, quantity, batchNumber, mfgDate, expiryDate });
   };
 
   const addProductItem = () => {
@@ -758,10 +774,6 @@ export function OrdersDialog({ isOpen, onClose, order, onSuccess, isReadOnly }) 
                orderId={order?.id || ''}
                isReadOnly={isReadOnly}
              />
-             {/* DEBUG: Show data */}
-             <div className="mt-4 p-2 bg-gray-100 text-xs">
-               <strong>DEBUG:</strong> productsWithStockAndAllocation: {JSON.stringify(productsWithStockAndAllocation, null, 2)}
-             </div>
             </TabsContent>
           </Tabs>
           {validationError && (

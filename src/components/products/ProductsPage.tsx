@@ -46,13 +46,13 @@ export function ProductsPage() {
   const [dialogType, setDialogType] = useState<'basic' | 'recipe' | 'price' | 'stock' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { canEditView, user, profile } = useAuth();
+  const isReadOnly = !canEditView('products');
 
   console.log('ProductsPage - Auth Debug:', {
     user: user?.id,
     profile: profile?.role,
-    isStaff,
-    isAdmin,
+    isReadOnly,
     userEmail: user?.email
   });
 
@@ -225,7 +225,7 @@ export function ProductsPage() {
   });
 
   const handleAddProduct = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view products",
@@ -259,7 +259,7 @@ export function ProductsPage() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view products",
@@ -273,7 +273,7 @@ export function ProductsPage() {
   };
 
   const handleToggleActive = (productId: string, currentActive: boolean) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view products",
@@ -315,14 +315,14 @@ export function ProductsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? 'View Products' : 'Manage Products'}
+              {isReadOnly ? 'View Products' : 'Manage Products'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isStaff ? 'View product information' : 'Create and manage product information'}
+              {isReadOnly ? 'View product information' : 'Create and manage product information'}
             </p>
           </div>
         </div>
-        {!isStaff && (
+        {canEditView('products') && (
           <div className="flex gap-4">
             <Button onClick={handleAddProduct} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -367,7 +367,7 @@ export function ProductsPage() {
         onManageRecipe={handleManageRecipe}
         onManagePrice={handleManagePrice}
         onManageStock={handleManageStock}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       {/* Pagination */}
@@ -386,7 +386,7 @@ export function ProductsPage() {
         onClose={handleDialogClose}
         product={selectedProduct}
         onSuccess={handleSuccess}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       <ProductRecipeDialog
@@ -394,7 +394,7 @@ export function ProductsPage() {
         onClose={handleDialogClose}
         product={selectedProduct}
         onSuccess={handleSuccess}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       <ProductPriceDialog
@@ -402,7 +402,7 @@ export function ProductsPage() {
         onClose={handleDialogClose}
         product={selectedProduct}
         onSuccess={handleSuccess}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       <ProductStockDialog
@@ -410,7 +410,7 @@ export function ProductsPage() {
         onClose={handleDialogClose}
         product={selectedProduct}
         onSuccess={handleSuccess}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

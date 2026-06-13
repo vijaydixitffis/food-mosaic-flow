@@ -15,10 +15,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal, Truck } from 'lucide-react';
+import {
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Truck,
+  PackageCheck,
+  Wrench,
+  BadgeCheck,
+  CheckCheck,
+  ClipboardCheck,
+  CheckSquare,
+} from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type WorkOrderWithProducts = WorkOrder & {
   work_order_products: Array<{
     id: string;
@@ -38,37 +50,47 @@ interface WorkOrdersTableProps {
   isLoading: boolean;
   onEdit: (workOrder: WorkOrderWithProducts) => void;
   onDelete: (workOrderId: string) => void;
-  onUpdateStatus: (workOrderId: string, status: string) => void;
+  onAdvanceStatus: (workOrder: WorkOrderWithProducts) => void;
   onViewDelivery: (workOrder: WorkOrderWithProducts) => void;
   isReadOnly: boolean;
+  canMarkComplete: boolean;
 }
 
-const statusStyles = {
-  DRAFT: 'bg-slate-100 text-slate-800',
-  IN_PROGRESS: 'bg-orange-100 text-orange-800',
-  COMPLETED: 'bg-green-100 text-green-800',
-  CANCELLED: 'bg-red-100 text-red-800',
-  PROCURED: 'bg-amber-100 text-amber-800',
+const STATUS_STYLES: Record<WorkOrderStatus, string> = {
+  CREATED:   'bg-blue-100 text-blue-800',
+  PROCURE:   'bg-red-100 text-red-800',
+  'IN-STOCK':'bg-yellow-100 text-yellow-800',
+  READY:     'bg-lime-100 text-lime-800',
+  PROCESSED: 'bg-purple-100 text-purple-800',
+  EXECUTED:  'bg-teal-100 text-teal-800',
+  COMPLETE:  'bg-green-100 text-green-800',
 };
 
-const statusOptions = [
-  'CREATED',
-  'PROCURED',
-  'IN-STOCK',
-  'PROCESSED',
-  'SHIPPED',
-  'EXECUTED',
-  'COMPLETE',
-];
+const NEXT_STEP_CONFIG: Record<
+  WorkOrderStatus,
+  { label: string; Icon: React.ElementType } | null
+> = {
+  CREATED:   { label: 'Check Ingredients',  Icon: ClipboardCheck },
+  PROCURE:   { label: 'Mark In-Stock',       Icon: PackageCheck },
+  'IN-STOCK':{ label: 'Mark Ready',          Icon: CheckSquare },
+  READY:     { label: 'Mark Processed',      Icon: Wrench },
+  PROCESSED: { label: 'Execute & Add Stock', Icon: BadgeCheck },
+  EXECUTED:  { label: 'Mark Complete',       Icon: CheckCheck },
+  COMPLETE:  null,
+};
+
+const canEdit = (status: WorkOrderStatus) => status === 'CREATED' || status === 'PROCURE';
+const canDelete = (status: WorkOrderStatus) => status === 'CREATED';
 
 export function WorkOrdersTable({
   workOrders,
   isLoading,
   onEdit,
   onDelete,
-  onUpdateStatus,
+  onAdvanceStatus,
   onViewDelivery,
   isReadOnly,
+  canMarkComplete,
 }: WorkOrdersTableProps) {
   if (isLoading) {
     return (
@@ -100,87 +122,99 @@ export function WorkOrdersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {workOrders.map((workOrder) => (
-            <TableRow key={workOrder.id}>
-              <TableCell className="font-medium">{workOrder.name}</TableCell>
-              <TableCell className="max-w-xs truncate">
-                {workOrder.description || '-'}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={statusStyles[workOrder.status as keyof typeof statusStyles]}
-                >
-                  {workOrder.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {workOrder.work_order_products.length > 0 ? (
-                  <div className="space-y-1">
-                    {workOrder.work_order_products.slice(0, 2).map((wop) => (
-                      <div key={wop.id} className="text-sm">
-                        {wop.products.name} ({wop.total_weight}kg)
-                      </div>
-                    ))}
-                    {workOrder.work_order_products.length > 2 && (
-                      <div className="text-xs text-gray-500">
-                        +{workOrder.work_order_products.length - 2} more
-                      </div>
+          {workOrders.map((workOrder) => {
+            const status = workOrder.status as WorkOrderStatus;
+            const nextStep = NEXT_STEP_CONFIG[status];
+
+            return (
+              <TableRow key={workOrder.id}>
+                <TableCell className="font-medium">{workOrder.name}</TableCell>
+                <TableCell className="max-w-xs truncate">
+                  {workOrder.description || '-'}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="secondary"
+                    className={STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-800'}
+                  >
+                    {status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {workOrder.work_order_products.length > 0 ? (
+                    <div className="space-y-1">
+                      {workOrder.work_order_products.slice(0, 2).map((wop) => (
+                        <div key={wop.id} className="text-sm">
+                          {wop.products.name} ({wop.total_weight}kg)
+                        </div>
+                      ))}
+                      {workOrder.work_order_products.length > 2 && (
+                        <div className="text-xs text-gray-500">
+                          +{workOrder.work_order_products.length - 2} more
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">No products</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {new Date(workOrder.created_at).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: '2-digit',
+                  })}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {/* Next Step primary action button */}
+                    {!isReadOnly && nextStep && !(status === 'EXECUTED' && !canMarkComplete) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1.5 text-xs"
+                        onClick={() => onAdvanceStatus(workOrder)}
+                      >
+                        <nextStep.Icon className="h-3.5 w-3.5" />
+                        {nextStep.label}
+                      </Button>
                     )}
-                  </div>
-                ) : (
-                  <span className="text-gray-500">No products</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {new Date(workOrder.created_at).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: '2-digit'
-                })}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white">
-                    <DropdownMenuItem onClick={() => onViewDelivery(workOrder)}>
-                      <Truck className="mr-2 h-4 w-4" />
-                      View Delivery
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(workOrder)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      {isReadOnly ? 'View' : 'Edit'}
-                    </DropdownMenuItem>
-                    {!isReadOnly && (
-                      <>
-                        <DropdownMenuItem
-                          onClick={() => onDelete(workOrder.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                    {status === 'COMPLETE' && (
+                      <CheckCheck className="h-5 w-5 text-green-600" />
+                    )}
+
+                    {/* Overflow menu — secondary actions only */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white">
+                        <DropdownMenuItem onClick={() => onViewDelivery(workOrder)}>
+                          <Truck className="mr-2 h-4 w-4" />
+                          View Delivery
                         </DropdownMenuItem>
-                        {statusOptions
-                          .filter((status) => status !== workOrder.status)
-                          .map((status) => (
-                            <DropdownMenuItem
-                              key={status}
-                              onClick={() => onUpdateStatus(workOrder.id, status)}
-                            >
-                              Update to {status}
-                            </DropdownMenuItem>
-                          ))}
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+                        <DropdownMenuItem onClick={() => onEdit(workOrder)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          {isReadOnly || !canEdit(status) ? 'View' : 'Edit'}
+                        </DropdownMenuItem>
+                        {!isReadOnly && canDelete(status) && (
+                          <DropdownMenuItem
+                            onClick={() => onDelete(workOrder.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

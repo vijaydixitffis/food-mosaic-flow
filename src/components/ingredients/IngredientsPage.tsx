@@ -35,7 +35,8 @@ export function IngredientsPage() {
   const [pageSize, setPageSize] = useState(5);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin, isStaff } = useAuth();
+  const { canEditView } = useAuth();
+  const isReadOnly = !canEditView('ingredients');
 
   // Fetch ingredients
   const { data: ingredients = [], isLoading, error } = useQuery({
@@ -138,7 +139,7 @@ export function IngredientsPage() {
   });
 
   const handleAddIngredient = () => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view ingredients",
@@ -156,7 +157,7 @@ export function IngredientsPage() {
   };
 
   const handleDeactivateIngredient = async (id: string) => {
-    if (isStaff) {
+    if (isReadOnly) {
       toast({
         title: "Access Restricted",
         description: "You can only view ingredients",
@@ -203,16 +204,16 @@ export function IngredientsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+                {isReadOnly ? 'View Ingredients' : 'Manage Ingredients'}
               </h1>
               <p className="text-gray-600 mt-2">
-                {isStaff ? 'View ingredient information' : 'Create and manage ingredient information'}
+                {isReadOnly ? 'View ingredient information' : 'Create and manage ingredient information'}
               </p>
             </div>
           </div>
           {/* Button for Add Ingredient */}
           <div className="flex gap-4">
-            {!isStaff && (
+            {canEditView('ingredients') && (
               <Button onClick={handleAddIngredient} className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Add Ingredient
@@ -236,7 +237,7 @@ export function IngredientsPage() {
           isLoading={isLoading}
           onEdit={handleEditIngredient}
           onDeactivate={handleDeactivateIngredient}
-          isReadOnly={isStaff}
+          isReadOnly={isReadOnly}
         />
 
         {/* Pagination */}
@@ -254,7 +255,7 @@ export function IngredientsPage() {
           isOpen={isDialogOpen}
           onClose={handleDialogClose}
           ingredient={editingIngredient}
-          isReadOnly={isStaff}
+          isReadOnly={isReadOnly}
         />
 
         {/* Stock management is now handled within the IngredientDialog */}
@@ -271,16 +272,16 @@ export function IngredientsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? 'View Ingredients' : 'Manage Ingredients'}
+              {isReadOnly ? 'View Ingredients' : 'Manage Ingredients'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isStaff ? 'View ingredient information' : 'Create and manage ingredient information'}
+              {isReadOnly ? 'View ingredient information' : 'Create and manage ingredient information'}
             </p>
           </div>
         </div>
         {/* Button for Add Ingredient */}
         <div className="flex gap-4">
-          {!isStaff && (
+          {canEditView('ingredients') && (
             <Button onClick={handleAddIngredient} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Add Ingredient
@@ -298,7 +299,7 @@ export function IngredientsPage() {
         isLoading={isLoading}
         onEdit={handleEditIngredient}
         onDeactivate={handleDeactivateIngredient}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
       {/* Pagination */}
@@ -316,7 +317,7 @@ export function IngredientsPage() {
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
         ingredient={editingIngredient}
-        isReadOnly={isStaff}
+        isReadOnly={isReadOnly}
       />
 
               {/* Stock management is now handled within the IngredientDialog */}

@@ -42,7 +42,7 @@ interface RecipeDialogProps {
 }
 
 export function RecipeDialog({ recipe, isOpen, onClose, isReadOnly = false }: RecipeDialogProps) {
-  const { isAdmin } = useAuth();
+  const { canEditView } = useAuth();
   const { toast } = useToast();
   
   const [name, setName] = useState('');
@@ -295,7 +295,7 @@ export function RecipeDialog({ recipe, isOpen, onClose, isReadOnly = false }: Re
     }
   };
 
-  const effectiveIsReadOnly = isReadOnly || !isAdmin;
+  const effectiveIsReadOnly = isReadOnly || !canEditView('recipes');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

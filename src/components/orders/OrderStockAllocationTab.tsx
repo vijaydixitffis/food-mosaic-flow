@@ -9,10 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { allocateProductStock } from '@/integrations/supabase/stock';
 
 interface ProductWithStockAndAllocation {
   id: string; // order_product id
@@ -21,13 +18,19 @@ interface ProductWithStockAndAllocation {
   quantity_ordered: number; // number_of_pouches from order_products
   stock: number | null;
   allocated_quantity: number;
-  remaining_quantity: number; // NEW: calculated remaining stock
+  remaining_quantity: number;
 }
 
 interface OrderStockAllocationTabProps {
   productsWithStockAndAllocation: ProductWithStockAndAllocation[];
-  orderId: string | undefined; // Pass the order ID
-  onAllocateStock: (productId: string, allocatedQuantity: number) => void;
+  orderId: string | undefined;
+  onAllocateStock: (
+    productId: string,
+    quantity: number,
+    batchNumber?: string,
+    mfgDate?: string,
+    expiryDate?: string
+  ) => void;
   isReadOnly: boolean;
 }
 
@@ -37,51 +40,26 @@ export function OrderStockAllocationTab({
   onAllocateStock,
   isReadOnly,
 }: OrderStockAllocationTabProps) {
-  const [allocationQuantities, setAllocationQuantities] = useState<{
-    [productId: string]: number;
-  }>({});
+  const [allocationQuantities, setAllocationQuantities] = useState<Record<string, number>>({});
+  const [batchNumbers, setBatchNumbers] = useState<Record<string, string>>({});
+  const [mfgDates, setMfgDates] = useState<Record<string, string>>({});
+  const [expiryDates, setExpiryDates] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
-  const handleInputChange = (productId: string, value: string) => {
-    const quantity = parseFloat(value);
-    setAllocationQuantities({
-      ...allocationQuantities,
-      [productId]: isNaN(quantity) ? 0 : quantity,
-    });
-  };
-
   const handleAllocateClick = (product: ProductWithStockAndAllocation) => {
-    console.log('=== ALLOCATE CLICK DEBUG ===');
-    console.log('Product:', product);
-    console.log('OrderId:', orderId);
-    console.log('Allocation quantities:', allocationQuantities);
-    console.log('Quantity to allocate:', allocationQuantities[product.product_id] || 0);
-    
     if (!orderId) {
-      console.log('ERROR: Order ID missing');
-      toast({
-        title: 'Error',
-        description: 'Order ID is missing for allocation.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Order ID is missing for allocation.', variant: 'destructive' });
       return;
     }
 
     const quantityToAllocate = allocationQuantities[product.product_id] || 0;
-    console.log('Final quantity to allocate:', quantityToAllocate);
 
     if (quantityToAllocate <= 0) {
-      console.log('ERROR: Quantity <= 0');
-      toast({
-        title: 'Validation Error',
-        description: 'Please enter a quantity greater than 0.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Validation Error', description: 'Please enter a quantity greater than 0.', variant: 'destructive' });
       return;
     }
 
     if (product.stock !== null && quantityToAllocate > product.stock) {
-      console.log('ERROR: Quantity exceeds stock');
       toast({
         title: 'Validation Error',
         description: `Allocated quantity for ${product.product_name} exceeds available stock (${product.stock}).`,
@@ -90,16 +68,17 @@ export function OrderStockAllocationTab({
       return;
     }
 
-    console.log('About to clear input and call onAllocateStock');
-    // Clear the input field after allocation
-    setAllocationQuantities({
-        ...allocationQuantities,
-        [product.product_id]: 0,
-      });
+    const batch = batchNumbers[product.product_id] || undefined;
+    const mfg = mfgDates[product.product_id] || undefined;
+    const expiry = expiryDates[product.product_id] || undefined;
 
+    // Clear this product's inputs
+    setAllocationQuantities((prev) => ({ ...prev, [product.product_id]: 0 }));
+    setBatchNumbers((prev) => ({ ...prev, [product.product_id]: '' }));
+    setMfgDates((prev) => ({ ...prev, [product.product_id]: '' }));
+    setExpiryDates((prev) => ({ ...prev, [product.product_id]: '' }));
 
-    console.log('Calling onAllocateStock with:', product.product_id, quantityToAllocate);
-    onAllocateStock(product.product_id, quantityToAllocate);
+    onAllocateStock(product.product_id, quantityToAllocate, batch, mfg, expiry);
   };
 
   return (
@@ -108,7 +87,7 @@ export function OrderStockAllocationTab({
         <h3 className="text-lg font-medium">Finished Goods Stock Allocation</h3>
         <p className="text-sm text-gray-600">Allocate finished products from stock to this order.</p>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -117,14 +96,17 @@ export function OrderStockAllocationTab({
               <TableHead>Current Stock</TableHead>
               <TableHead>Allocated Qty</TableHead>
               <TableHead>Remaining Qty</TableHead>
-              {!isReadOnly && <TableHead>Allocate</TableHead>}
+              {!isReadOnly && <TableHead>Qty to Allocate</TableHead>}
+              {!isReadOnly && <TableHead>Batch No.</TableHead>}
+              {!isReadOnly && <TableHead>Mfg Date</TableHead>}
+              {!isReadOnly && <TableHead>Expiry</TableHead>}
               {!isReadOnly && <TableHead>Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {productsWithStockAndAllocation.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isReadOnly ? 5 : 7} className="text-center">
+                <TableCell colSpan={isReadOnly ? 5 : 10} className="text-center">
                   No products in this order or stock data not available.
                 </TableCell>
               </TableRow>
@@ -135,7 +117,9 @@ export function OrderStockAllocationTab({
                   <TableCell>{product.quantity_ordered}</TableCell>
                   <TableCell>{product.stock !== null ? product.stock : 'N/A'}</TableCell>
                   <TableCell>{product.allocated_quantity}</TableCell>
-                  <TableCell className={product.remaining_quantity < 0 ? "text-red-600 font-semibold" : ""}>
+                  <TableCell
+                    className={product.remaining_quantity < 0 ? 'text-red-600 font-semibold' : ''}
+                  >
                     {product.remaining_quantity}
                   </TableCell>
                   {!isReadOnly && (
@@ -146,10 +130,58 @@ export function OrderStockAllocationTab({
                         step="any"
                         value={allocationQuantities[product.product_id] || ''}
                         onChange={(e) =>
-                          handleInputChange(product.product_id, e.target.value)
+                          setAllocationQuantities((prev) => ({
+                            ...prev,
+                            [product.product_id]: parseFloat(e.target.value) || 0,
+                          }))
                         }
                         className="w-24"
-                        disabled={isReadOnly}
+                      />
+                    </TableCell>
+                  )}
+                  {!isReadOnly && (
+                    <TableCell>
+                      <Input
+                        type="text"
+                        placeholder="Batch No."
+                        value={batchNumbers[product.product_id] || ''}
+                        onChange={(e) =>
+                          setBatchNumbers((prev) => ({
+                            ...prev,
+                            [product.product_id]: e.target.value,
+                          }))
+                        }
+                        className="w-28"
+                      />
+                    </TableCell>
+                  )}
+                  {!isReadOnly && (
+                    <TableCell>
+                      <Input
+                        type="date"
+                        value={mfgDates[product.product_id] || ''}
+                        onChange={(e) =>
+                          setMfgDates((prev) => ({
+                            ...prev,
+                            [product.product_id]: e.target.value,
+                          }))
+                        }
+                        className="w-36"
+                      />
+                    </TableCell>
+                  )}
+                  {!isReadOnly && (
+                    <TableCell>
+                      <Input
+                        type="date"
+                        value={expiryDates[product.product_id] || ''}
+                        onChange={(e) =>
+                          setExpiryDates((prev) => ({
+                            ...prev,
+                            [product.product_id]: e.target.value,
+                          }))
+                        }
+                        className="w-36"
                       />
                     </TableCell>
                   )}
@@ -158,7 +190,7 @@ export function OrderStockAllocationTab({
                       <Button
                         size="sm"
                         onClick={() => handleAllocateClick(product)}
-                        disabled={isReadOnly || (allocationQuantities[product.product_id] || 0) <= 0}
+                        disabled={(allocationQuantities[product.product_id] || 0) <= 0}
                       >
                         Allocate
                       </Button>

@@ -15,7 +15,7 @@ type CompanySettings = Database['public']['Tables']['company_settings']['Row'];
 export function CompanySettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { canEditView } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch company settings
@@ -214,7 +214,7 @@ export function CompanySettingsPage() {
             Manage your company branding and contact information
           </p>
         </div>
-        {isAdmin && (
+        {canEditView('settings') && (
           <Button
             onClick={() => setIsEditing(!isEditing)}
             variant={isEditing ? "outline" : "default"}
@@ -257,7 +257,7 @@ export function CompanySettingsPage() {
         </CardContent>
       </Card>
 
-      {!isAdmin && (
+      {!canEditView('settings') && (
         <Card>
           <CardContent className="p-6">
             <div className="text-center text-gray-600">
