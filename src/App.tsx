@@ -17,7 +17,7 @@ function App() {
         <AuthProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter basename="/food-mosaic-flow">
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
